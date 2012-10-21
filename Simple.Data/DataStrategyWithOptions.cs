@@ -5,8 +5,8 @@ namespace Simple.Data
 {
     internal class DataStrategyWithOptions : DataStrategy
     {
-        private readonly DataStrategy _wrappedStrategy;
         private readonly OptionsBase _options;
+        private readonly DataStrategy _wrappedStrategy;
 
         public DataStrategyWithOptions(DataStrategy wrappedStrategy, OptionsBase options)
         {
@@ -15,9 +15,14 @@ namespace Simple.Data
             _wrappedStrategy.GetAdapter().Options = options;
         }
 
+        internal override RunStrategy Run
+        {
+            get { return _wrappedStrategy.Run; }
+        }
+
         public override Adapter GetAdapter()
         {
-            var adapter = _wrappedStrategy.GetAdapter();
+            Adapter adapter = _wrappedStrategy.GetAdapter();
             adapter.Options = _options;
             return adapter;
         }
@@ -45,11 +50,6 @@ namespace Simple.Data
         protected internal override DataStrategy GetDatabase()
         {
             return _wrappedStrategy.GetDatabase();
-        }
-
-        internal override RunStrategy Run
-        {
-            get { return _wrappedStrategy.Run; }
         }
 
         protected internal override DataStrategy Clone()

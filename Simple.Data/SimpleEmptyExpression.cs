@@ -1,17 +1,21 @@
+using System;
+
 namespace Simple.Data
 {
-    using System;
-
     public class SimpleEmptyExpression : SimpleExpression, IEquatable<SimpleEmptyExpression>
     {
         public SimpleEmptyExpression() : base(null, null, SimpleExpressionType.Empty)
         {
         }
 
+        #region IEquatable<SimpleEmptyExpression> Members
+
         public bool Equals(SimpleEmptyExpression other)
         {
             return !ReferenceEquals(null, other);
         }
+
+        #endregion
 
         public override bool Equals(object obj)
         {

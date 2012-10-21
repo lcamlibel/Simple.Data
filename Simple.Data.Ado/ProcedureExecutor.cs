@@ -30,6 +30,8 @@ namespace Simple.Data.Ado
             _executeImpl = ExecuteReader;
         }
 
+        #region IProcedureExecutor Members
+
         public IEnumerable<ResultSet> Execute(IDictionary<string, object> suppliedParameters)
         {
             return Execute(suppliedParameters, null);
@@ -37,15 +39,15 @@ namespace Simple.Data.Ado
 
         public IEnumerable<ResultSet> Execute(IDictionary<string, object> suppliedParameters, IDbTransaction transaction)
         {
-            var procedure = _adapter.GetSchema().FindProcedure(_procedureName);
+            Procedure procedure = _adapter.GetSchema().FindProcedure(_procedureName);
             if (procedure == null)
             {
                 throw new UnresolvableObjectException(_procedureName.ToString());
             }
 
-            var cn = transaction == null ? _adapter.CreateConnection() : transaction.Connection;
+            IDbConnection cn = transaction == null ? _adapter.CreateConnection() : transaction.Connection;
             using (cn.MaybeDisposable())
-            using (var command = cn.CreateCommand(_adapter.AdoOptions))
+            using (IDbCommand command = cn.CreateCommand(_adapter.AdoOptions))
             {
                 command.Transaction = transaction;
                 command.CommandText = procedure.QualifiedName;
@@ -53,7 +55,7 @@ namespace Simple.Data.Ado
                 SetParameters(procedure, command, suppliedParameters);
                 try
                 {
-                    var result = _executeImpl(command);
+                    IEnumerable<ResultSet> result = _executeImpl(command);
                     if (command.Parameters.Contains(SimpleReturnParameterName))
                         suppliedParameters["__ReturnValue"] = command.Parameters.GetValue(SimpleReturnParameterName);
                     RetrieveOutputParameterValues(procedure, command, suppliedParameters);
@@ -66,9 +68,15 @@ namespace Simple.Data.Ado
             }
         }
 
-        private static void RetrieveOutputParameterValues(Procedure procedure, IDbCommand command, IDictionary<string, object> suppliedParameters)
+        #endregion
+
+        private static void RetrieveOutputParameterValues(Procedure procedure, IDbCommand command,
+                                                          IDictionary<string, object> suppliedParameters)
         {
-            foreach (var outputParameter in procedure.Parameters.Where(p => p.Direction == ParameterDirection.InputOutput || p.Direction == ParameterDirection.Output))
+            foreach (
+                Parameter outputParameter in
+                    procedure.Parameters.Where(
+                        p => p.Direction == ParameterDirection.InputOutput || p.Direction == ParameterDirection.Output))
             {
                 suppliedParameters[outputParameter.Name.Replace("@", "")] =
                     command.Parameters.GetValue(outputParameter.Name);
@@ -78,7 +86,7 @@ namespace Simple.Data.Ado
         public IEnumerable<ResultSet> ExecuteReader(IDbCommand command)
         {
             command.Connection.OpenIfClosed();
-            using (var reader = command.TryExecuteReader())
+            using (IDataReader reader = command.TryExecuteReader())
             {
                 // Reader isn't always returned - added check to stop NullReferenceException
                 if ((reader != null) && (reader.FieldCount > 0))
@@ -102,12 +110,14 @@ namespace Simple.Data.Ado
             return Enumerable.Empty<ResultSet>();
         }
 
-        private static void SetParameters(Procedure procedure, IDbCommand cmd, IDictionary<string, object> suppliedParameters)
+        private static void SetParameters(Procedure procedure, IDbCommand cmd,
+                                          IDictionary<string, object> suppliedParameters)
         {
-            var returnParameter = procedure.Parameters.FirstOrDefault(p => p.Direction == ParameterDirection.ReturnValue);
-            if (returnParameter!=null)
+            Parameter returnParameter =
+                procedure.Parameters.FirstOrDefault(p => p.Direction == ParameterDirection.ReturnValue);
+            if (returnParameter != null)
             {
-                var cmdParameter = cmd.CreateParameter();
+                IDbDataParameter cmdParameter = cmd.CreateParameter();
                 cmdParameter.ParameterName = SimpleReturnParameterName;
                 cmdParameter.Size = returnParameter.Size;
                 cmdParameter.Direction = ParameterDirection.ReturnValue;
@@ -116,21 +126,26 @@ namespace Simple.Data.Ado
             }
 
             int i = 0;
-            
-            foreach (var parameter in procedure.Parameters.Where(p => p.Direction != ParameterDirection.ReturnValue))
+
+            foreach (
+                Parameter parameter in procedure.Parameters.Where(p => p.Direction != ParameterDirection.ReturnValue))
             {
                 //Tim Cartwright: Allows for case insensive parameters
-                var value = suppliedParameters.FirstOrDefault(sp => 
-                    sp.Key.Equals(parameter.Name.Replace("@", ""), StringComparison.InvariantCultureIgnoreCase)
-                    || sp.Key.Equals("_" + i)
-                );
-                var cmdParameter = cmd.CreateParameter();
+                KeyValuePair<string, object> value = suppliedParameters.FirstOrDefault(sp =>
+                                                                                       sp.Key.Equals(
+                                                                                           parameter.Name.Replace("@",
+                                                                                                                  ""),
+                                                                                           StringComparison.
+                                                                                               InvariantCultureIgnoreCase)
+                                                                                       || sp.Key.Equals("_" + i)
+                    );
+                IDbDataParameter cmdParameter = cmd.CreateParameter();
                 //Tim Cartwright: method AddParameter does not allow for the "default" keyword to ever be passed into 
                 //  parameters in stored procedures with defualt values. Null is always sent in. This will allow for default 
                 //  values to work properly. Not sure why this is so, in both cases the value gets set. Just is.
                 //var cmdParameter = cmd.AddParameter(parameter.Name, value);
                 cmdParameter.ParameterName = parameter.Name;
-                cmdParameter.Value = value.Value; 
+                cmdParameter.Value = value.Value;
                 cmdParameter.Direction = parameter.Direction;
                 //Tim Cartwright: I added size and dbtype so inout/out params would function properly.
                 //not setting the proper dbtype and size with out put parameters causes the exception: "Size property has an invalid size of 0"
@@ -145,6 +160,5 @@ namespace Simple.Data.Ado
                 i++;
             }
         }
-
     }
 }

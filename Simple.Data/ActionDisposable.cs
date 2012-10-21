@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Simple.Data
 {
@@ -19,10 +16,7 @@ namespace Simple.Data
             _action = action ?? (() => { });
         }
 
-        ~ActionDisposable()
-        {
-            Dispose(false);
-        }
+        #region IDisposable Members
 
         public void Dispose()
         {
@@ -30,9 +24,17 @@ namespace Simple.Data
             GC.SuppressFinalize(this);
         }
 
+        #endregion
+
+        ~ActionDisposable()
+        {
+            Dispose(false);
+        }
+
         private void Dispose(bool disposing)
         {
-            _action();
+            if (disposing)
+                _action();
         }
     }
 }

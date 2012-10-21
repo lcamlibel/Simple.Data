@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Simple.Data.Extensions;
 
 namespace Simple.Data.Ado.Schema
 {
-    class TableCollection : Collection<Table>
+    internal class TableCollection : Collection<Table>
     {
         public TableCollection()
         {
@@ -27,12 +26,12 @@ namespace Simple.Data.Ado.Schema
         {
             if (tableName.Contains('.'))
             {
-                var schemaDotTable = tableName.Split('.');
+                string[] schemaDotTable = tableName.Split('.');
                 return Find(schemaDotTable[schemaDotTable.Length - 1], schemaDotTable[0]);
             }
-            var table = FindTableWithName(tableName.Homogenize())
-                   ?? FindTableWithPluralName(tableName.Homogenize())
-                   ?? FindTableWithSingularName(tableName.Homogenize());
+            Table table = FindTableWithName(tableName.Homogenize())
+                          ?? FindTableWithPluralName(tableName.Homogenize())
+                          ?? FindTableWithSingularName(tableName.Homogenize());
 
             if (table == null)
             {
@@ -51,22 +50,17 @@ namespace Simple.Data.Ado.Schema
         /// <returns>A <see cref="Table"/> if a match is found; otherwise, <c>null</c>.</returns>
         public Table Find(string tableName, string schemaName)
         {
-            var table = FindTableWithName(tableName.Homogenize(), schemaName.Homogenize())
-                   ?? FindTableWithPluralName(tableName.Homogenize(), schemaName.Homogenize())
-                   ?? FindTableWithSingularName(tableName.Homogenize(), schemaName.Homogenize());
+            Table table = (FindTableWithName(tableName.Homogenize(), schemaName.Homogenize())
+                           ?? FindTableWithPluralName(tableName.Homogenize(), schemaName.Homogenize())
+                           ?? FindTableWithSingularName(tableName.Homogenize(), schemaName.Homogenize())) ??
+                          (FindTableWithName(tableName.Homogenize())
+                                                                                                              ?? FindTableWithPluralName(tableName.Homogenize())
+                                                                                                              ?? FindTableWithSingularName(tableName.Homogenize()));
 
             if (table == null)
             {
-                // Try without schemaName, which might not be schemaName
-                table = FindTableWithName(tableName.Homogenize())
-                        ?? FindTableWithPluralName(tableName.Homogenize())
-                        ?? FindTableWithSingularName(tableName.Homogenize());
-
-            }
-
-            if (table == null)
-            {
-                throw new UnresolvableObjectException(schemaName + '.' + tableName, "No matching table found, or insufficient permissions.");
+                throw new UnresolvableObjectException(schemaName + '.' + tableName,
+                                                      "No matching table found, or insufficient permissions.");
             }
 
             return table;
@@ -84,16 +78,13 @@ namespace Simple.Data.Ado.Schema
 
         private Table FindTableWithName(string tableName, string schemaName)
         {
-            return this
-                .Where(t => t.HomogenizedName.Equals(tableName) && (t.Schema == null || t.Schema.Homogenize().Equals(schemaName)))
-                .SingleOrDefault();
+            return this.SingleOrDefault(t => t.HomogenizedName.Equals(tableName) &&
+                                             (t.Schema == null || t.Schema.Homogenize().Equals(schemaName)));
         }
 
         private Table FindTableWithName(string tableName)
         {
-            return this
-                .Where(t => t.HomogenizedName.Equals(tableName))
-                .SingleOrDefault();
+            return this.SingleOrDefault(t => t.HomogenizedName.Equals(tableName));
         }
 
         private Table FindTableWithPluralName(string tableName)

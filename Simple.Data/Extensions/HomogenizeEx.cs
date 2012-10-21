@@ -1,6 +1,6 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
-using System;
 
 namespace Simple.Data.Extensions
 {
@@ -8,6 +8,7 @@ namespace Simple.Data.Extensions
     {
         private static readonly ConcurrentDictionary<string, string> Cache
             = new ConcurrentDictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+
         private static Regex _homogenizeRegex = new Regex("[^a-z0-9]");
 
         /// <summary>

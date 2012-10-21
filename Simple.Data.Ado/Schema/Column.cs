@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
 using Simple.Data.Extensions;
 
@@ -8,10 +7,10 @@ namespace Simple.Data.Ado.Schema
     public class Column : IEquatable<Column>
     {
         private readonly string _actualName;
-        private readonly Table _table;
-        private readonly bool _isIdentity;
         private readonly DbType _dbType;
+        private readonly bool _isIdentity;
         private readonly int _maxLength;
+        private readonly Table _table;
 
         public Column(string actualName, Table table) : this(actualName, table, DbType.Object)
         {
@@ -21,7 +20,8 @@ namespace Simple.Data.Ado.Schema
         {
         }
 
-        public Column(string actualName, Table table, bool isIdentity) : this(actualName, table, isIdentity, DbType.Object, 0)
+        public Column(string actualName, Table table, bool isIdentity)
+            : this(actualName, table, isIdentity, DbType.Object, 0)
         {
         }
 
@@ -79,6 +79,8 @@ namespace Simple.Data.Ado.Schema
             get { return _dbType == DbType.Binary; }
         }
 
+        #region IEquatable<Column> Members
+
         /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.
         /// </summary>
@@ -92,6 +94,8 @@ namespace Simple.Data.Ado.Schema
             if (ReferenceEquals(this, other)) return true;
             return Equals(other._actualName, _actualName) && Equals(other._table, _table);
         }
+
+        #endregion
 
         /// <summary>
         /// Determines whether the specified <see cref="T:System.Object"/> is equal to the current <see cref="T:System.Object"/>.
@@ -119,7 +123,8 @@ namespace Simple.Data.Ado.Schema
         {
             unchecked
             {
-                return ((_actualName != null ? _actualName.GetHashCode() : 0)*397) ^ (_table != null ? _table.GetHashCode() : 0);
+                return ((_actualName != null ? _actualName.GetHashCode() : 0)*397) ^
+                       (_table != null ? _table.GetHashCode() : 0);
             }
         }
     }

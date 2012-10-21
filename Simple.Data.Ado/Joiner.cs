@@ -10,9 +10,9 @@ namespace Simple.Data.Ado
 {
     public class Joiner
     {
+        private readonly ConcurrentDictionary<ObjectName, string> _done = new ConcurrentDictionary<ObjectName, string>();
         private readonly JoinType _joinType;
         private readonly DatabaseSchema _schema;
-        private readonly ConcurrentDictionary<ObjectName, string> _done = new ConcurrentDictionary<ObjectName, string>();
 
         public Joiner(DatabaseSchema schema)
             : this(JoinType.Outer, schema)
@@ -26,9 +26,16 @@ namespace Simple.Data.Ado
             _schema = schema;
         }
 
-        public IEnumerable<string> GetJoinClauses(ObjectName mainTableName, IEnumerable<string> tableList, JoinType joinType = JoinType.Inner)
+        private string JoinKeyword
         {
-            var tablePairs = tableList.Select(t => new ObjectName(mainTableName.Schema, t)).ToTuplePairs().ToList();
+            get { return _joinType == JoinType.Inner ? string.Empty : "LEFT"; }
+        }
+
+        public IEnumerable<string> GetJoinClauses(ObjectName mainTableName, IEnumerable<string> tableList,
+                                                  JoinType joinType = JoinType.Inner)
+        {
+            List<Tuple<ObjectName, ObjectName>> tablePairs =
+                tableList.Select(t => new ObjectName(mainTableName.Schema, t)).ToTuplePairs().ToList();
             foreach (var tablePair in tablePairs)
             {
                 AddJoin(tablePair.Item1, tablePair.Item2);
@@ -41,7 +48,8 @@ namespace Simple.Data.Ado
             if (expression == SimpleExpression.Empty) return Enumerable.Empty<string>();
 
             _done.AddOrUpdate(mainTableName, string.Empty, (s, o) => string.Empty);
-            var tablePairs = GetTableNames(expression, mainTableName.Schema).Distinct().ToList();
+            List<Tuple<ObjectName, ObjectName>> tablePairs =
+                GetTableNames(expression, mainTableName.Schema).Distinct().ToList();
             foreach (var tablePair in tablePairs)
             {
                 AddJoin(tablePair.Item1, tablePair.Item2);
@@ -49,10 +57,12 @@ namespace Simple.Data.Ado
             return tablePairs.Select(tp => _done[tp.Item2]).Distinct();
         }
 
-        public IEnumerable<string> GetJoinClauses(ObjectName mainTableName, IEnumerable<ObjectReference> references, JoinType joinType = JoinType.Inner)
+        public IEnumerable<string> GetJoinClauses(ObjectName mainTableName, IEnumerable<ObjectReference> references,
+                                                  JoinType joinType = JoinType.Inner)
         {
             _done.AddOrUpdate(mainTableName, string.Empty, (s, o) => string.Empty);
-            var tablePairs = GetTableNames(references, mainTableName.Schema).Distinct().ToList();
+            List<Tuple<ObjectName, ObjectName>> tablePairs =
+                GetTableNames(references, mainTableName.Schema).Distinct().ToList();
             foreach (var tablePair in tablePairs)
             {
                 AddJoin(tablePair.Item1, tablePair.Item2, joinType);
@@ -63,10 +73,10 @@ namespace Simple.Data.Ado
         public IEnumerable<string> GetJoinClauses(IEnumerable<JoinClause> joins, ICommandBuilder commandBuilder)
         {
             var expressionFormatter = new ExpressionFormatter(commandBuilder, _schema);
-            foreach (var join in joins)
+            foreach (JoinClause join in joins)
             {
                 var builder = new StringBuilder(JoinTypeToKeyword(join.JoinType));
-                var joinExpression = join.JoinExpression ?? InferJoinExpression(join.Table);
+                SimpleExpression joinExpression = join.JoinExpression ?? InferJoinExpression(join.Table);
                 if (!ReferenceEquals(joinExpression, null))
                 {
                     builder.AppendFormat(" JOIN {0}{1} ON ({2})",
@@ -83,9 +93,9 @@ namespace Simple.Data.Ado
         private SimpleExpression InferJoinExpression(ObjectReference table)
         {
             if (table.GetOwner().IsNull()) return null;
-            var table1 = _schema.FindTable(table.GetOwner().GetName());
-            var table2 = _schema.FindTable(table.GetName());
-            var foreignKey = GetForeignKey(table1, table2);
+            Table table1 = _schema.FindTable(table.GetOwner().GetName());
+            Table table2 = _schema.FindTable(table.GetName());
+            ForeignKey foreignKey = GetForeignKey(table1, table2);
             return MakeJoinExpression(table, foreignKey);
         }
 
@@ -93,16 +103,16 @@ namespace Simple.Data.Ado
         {
             _done.GetOrAdd(table2Name, _ =>
                                            {
-                                               var table1 = _schema.FindTable(table1Name);
-                                               var table2 = _schema.FindTable(table2Name);
-                                               var foreignKey = GetForeignKey(table1, table2);
+                                               Table table1 = _schema.FindTable(table1Name);
+                                               Table table2 = _schema.FindTable(table2Name);
+                                               ForeignKey foreignKey = GetForeignKey(table1, table2);
                                                return MakeJoinText(table2, table2Name.Alias, foreignKey, joinType);
                                            });
         }
 
         private static ForeignKey GetForeignKey(Table table1, Table table2)
         {
-            var foreignKey =
+            ForeignKey foreignKey =
                 table2.ForeignKeys.FirstOrDefault(
                     fk => fk.MasterTable.Schema == table1.Schema && fk.MasterTable.Name == table1.ActualName)
                 ??
@@ -134,7 +144,7 @@ namespace Simple.Data.Ado
 
         private SimpleExpression MakeJoinExpression(ObjectReference table, ForeignKey foreignKey)
         {
-            var expression = CreateJoinExpression(table, foreignKey, 0);
+            SimpleExpression expression = CreateJoinExpression(table, foreignKey, 0);
 
             for (int i = 1; i < foreignKey.Columns.Length; i++)
             {
@@ -151,10 +161,10 @@ namespace Simple.Data.Ado
 
         private SimpleExpression CreateJoinExpression(ObjectReference table, ForeignKey foreignKey, int columnIndex)
         {
-            var masterObjectReference = ObjectReference.FromStrings(foreignKey.MasterTable.Name,
-                                                                    foreignKey.UniqueColumns[columnIndex]);
-            var detailObjectReference = ObjectReference.FromStrings(foreignKey.DetailTable.Name,
-                                                                    foreignKey.Columns[columnIndex]);
+            ObjectReference masterObjectReference = ObjectReference.FromStrings(foreignKey.MasterTable.Name,
+                                                                                foreignKey.UniqueColumns[columnIndex]);
+            ObjectReference detailObjectReference = ObjectReference.FromStrings(foreignKey.DetailTable.Name,
+                                                                                foreignKey.Columns[columnIndex]);
 
             if (!string.IsNullOrWhiteSpace(table.GetAlias()))
             {
@@ -169,16 +179,13 @@ namespace Simple.Data.Ado
 
         private string FormatJoinExpression(ForeignKey foreignKey, int columnIndex, string alias)
         {
-            var leftTable = string.IsNullOrWhiteSpace(alias)
-                                ? _schema.QuoteObjectName(foreignKey.MasterTable)
-                                : _schema.QuoteObjectName(alias);
-            return string.Format("{0}.{1} = {2}.{3}", leftTable, _schema.QuoteObjectName(foreignKey.UniqueColumns[columnIndex]),
-                                 _schema.QuoteObjectName(foreignKey.DetailTable), _schema.QuoteObjectName(foreignKey.Columns[columnIndex]));
-        }
-
-        private string JoinKeyword
-        {
-            get { return _joinType == JoinType.Inner ? string.Empty : "LEFT"; }
+            string leftTable = string.IsNullOrWhiteSpace(alias)
+                                   ? _schema.QuoteObjectName(foreignKey.MasterTable)
+                                   : _schema.QuoteObjectName(alias);
+            return string.Format("{0}.{1} = {2}.{3}", leftTable,
+                                 _schema.QuoteObjectName(foreignKey.UniqueColumns[columnIndex]),
+                                 _schema.QuoteObjectName(foreignKey.DetailTable),
+                                 _schema.QuoteObjectName(foreignKey.Columns[columnIndex]));
         }
 
         private string JoinTypeToKeyword(JoinType joinType)
@@ -186,19 +193,27 @@ namespace Simple.Data.Ado
             return joinType == JoinType.Inner ? string.Empty : "LEFT";
         }
 
-        private static IEnumerable<Tuple<ObjectName, ObjectName>> GetTableNames(IEnumerable<ObjectReference> references, string schema)
+        private static IEnumerable<Tuple<ObjectName, ObjectName>> GetTableNames(IEnumerable<ObjectReference> references,
+                                                                                string schema)
         {
             return references.SelectMany(r => DynamicReferenceToTuplePairs(r, schema))
-                .TupleSelect((table1, table2) => Tuple.Create(new ObjectName(schema, table1.Item1, table1.Item2), new ObjectName(schema, table2.Item1, table2.Item2)))
+                .TupleSelect(
+                    (table1, table2) =>
+                    Tuple.Create(new ObjectName(schema, table1.Item1, table1.Item2),
+                                 new ObjectName(schema, table2.Item1, table2.Item2)))
                 .Distinct();
         }
 
-        private static IEnumerable<Tuple<ObjectName, ObjectName>> GetTableNames(SimpleExpression expression, string schema)
+        private static IEnumerable<Tuple<ObjectName, ObjectName>> GetTableNames(SimpleExpression expression,
+                                                                                string schema)
         {
-            return expression == null ? Enumerable.Empty<Tuple<ObjectName, ObjectName>>() : GetTableNames(GetReferencesFromExpression(expression), schema);
+            return expression == null
+                       ? Enumerable.Empty<Tuple<ObjectName, ObjectName>>()
+                       : GetTableNames(GetReferencesFromExpression(expression), schema);
         }
 
-        private static IEnumerable<Tuple<Tuple<string, string>, Tuple<string, string>>> DynamicReferenceToTuplePairs(ObjectReference reference, string schema)
+        private static IEnumerable<Tuple<Tuple<string, string>, Tuple<string, string>>> DynamicReferenceToTuplePairs(
+            ObjectReference reference, string schema)
         {
             return reference.GetAllObjectNamesAndAliases()
                 .SkipWhile(s => s.Item1.Equals(schema, StringComparison.OrdinalIgnoreCase))
@@ -210,8 +225,8 @@ namespace Simple.Data.Ado
         {
             if (expression.Type == SimpleExpressionType.And || expression.Type == SimpleExpressionType.Or)
             {
-                return GetReferencesFromExpression((SimpleExpression)expression.LeftOperand)
-                    .Concat(GetReferencesFromExpression((SimpleExpression)expression.RightOperand));
+                return GetReferencesFromExpression((SimpleExpression) expression.LeftOperand)
+                    .Concat(GetReferencesFromExpression((SimpleExpression) expression.RightOperand));
             }
 
             return Enumerable.Empty<ObjectReference>()

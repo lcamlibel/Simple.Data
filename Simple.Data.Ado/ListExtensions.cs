@@ -1,8 +1,7 @@
-﻿namespace Simple.Data.Ado
-{
-    using System;
-    using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
+namespace Simple.Data.Ado
+{
     internal static class ListExtensions
     {
         public static void SetWithBuffer<T>(this List<T> list, int index, T value)

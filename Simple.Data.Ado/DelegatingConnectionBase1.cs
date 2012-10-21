@@ -26,6 +26,8 @@ namespace Simple.Data.Ado
             get { return _delegatedConnection; }
         }
 
+        #region IDbConnection Members
+
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
@@ -147,9 +149,15 @@ namespace Simple.Data.Ado
             get { return _delegatedConnection.State; }
         }
 
+        #endregion
+
+        #region ISchemaGetter Members
+
         public virtual DataTable GetSchema(string collectionName, params string[] constraints)
         {
             return _delegatedConnection.GetSchema(collectionName, constraints);
         }
+
+        #endregion
     }
 }

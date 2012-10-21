@@ -6,9 +6,9 @@ namespace Simple.Data.QueryPolyfills
 {
     internal class AggregateValueResolver : ValueResolver
     {
-        private readonly FunctionReference _reference;
         private readonly ValueResolver _argumentResolver;
         private readonly Func<IEnumerable<object>, object> _handler;
+        private readonly FunctionReference _reference;
 
         public AggregateValueResolver(FunctionReference reference)
         {
@@ -23,7 +23,8 @@ namespace Simple.Data.QueryPolyfills
             target[_reference.GetAliasOrName()] = GetValue(source, sourceAggregationValues);
         }
 
-        public override object GetValue(IDictionary<string, object> source, IEnumerable<IDictionary<string, object>> sourceAggregationValues = null)
+        public override object GetValue(IDictionary<string, object> source,
+                                        IEnumerable<IDictionary<string, object>> sourceAggregationValues = null)
         {
             if (sourceAggregationValues == null) throw new ArgumentNullException("sourceAggregationValues");
             return _handler(sourceAggregationValues.Select(d => _argumentResolver.GetValue(d)));

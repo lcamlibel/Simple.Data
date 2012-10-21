@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Data;
+using System.Linq;
 using Simple.Data.Extensions;
 
 namespace Simple.Data.Ado
@@ -13,7 +13,7 @@ namespace Simple.Data.Ado
             return ToDynamicRecord(dataRecord, null, null);
         }
 
-        public static dynamic ToDynamicRecord(this IDataRecord dataRecord, IDictionary<string,int> index)
+        public static dynamic ToDynamicRecord(this IDataRecord dataRecord, IDictionary<string, int> index)
         {
             return ToDynamicRecord(dataRecord, index, null, null);
         }
@@ -23,7 +23,8 @@ namespace Simple.Data.Ado
             return new SimpleRecord(dataRecord.ToDictionary(), tableName, database);
         }
 
-        public static dynamic ToDynamicRecord(this IDataRecord dataRecord, IDictionary<string,int> index, string tableName, Database database)
+        public static dynamic ToDynamicRecord(this IDataRecord dataRecord, IDictionary<string, int> index,
+                                              string tableName, Database database)
         {
             return new SimpleRecord(dataRecord.ToDictionary(index), tableName, database);
         }
@@ -34,18 +35,19 @@ namespace Simple.Data.Ado
 //            return dataRecord.GetFieldNames().ToDictionary(fieldName => fieldName.Homogenize(), fieldName => DBNullToClrNull(dataRecord[fieldName]));
         }
 
-        public static IDictionary<string, object> ToDictionary(this IDataRecord dataRecord, IDictionary<string,int> index)
+        public static IDictionary<string, object> ToDictionary(this IDataRecord dataRecord,
+                                                               IDictionary<string, int> index)
         {
-            return OptimizedDictionary.Create(index,dataRecord.GetValues());
+            return OptimizedDictionary.Create(index, dataRecord.GetValues());
         }
 
         public static Dictionary<string, int> CreateDictionaryIndex(this IDataRecord reader)
         {
-            var keys =
+            IDictionary<string, int> keys =
                 reader.GetFieldNames().Select((s, i) => new KeyValuePair<string, int>(s, i)).ToDictionary();
             return new Dictionary<string, int>(keys, HomogenizedEqualityComparer.DefaultInstance);
         }
-        
+
         public static IEnumerable<string> GetFieldNames(this IDataRecord dataRecord)
         {
             for (int i = 0; i < dataRecord.FieldCount; i++)

@@ -1,39 +1,39 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Data;
+using System.Threading;
 
 namespace Simple.Data.Ado
 {
-    using System.Collections;
-    using System.Data;
-    using System.Data.Common;
-    using System.Threading;
-
     internal class DataReaderEnumerable : IEnumerable<IDictionary<string, object>>
     {
-        private IEnumerable<IDictionary<string, object>> _cache; 
-        private IDictionary<string, int> _index;
         private readonly IDbCommand _command;
-        private readonly IDbTransaction _transaction;
         private readonly Func<IDbConnection> _createConnection;
+        private readonly IDbTransaction _transaction;
+        private IEnumerable<IDictionary<string, object>> _cache;
+        private IDictionary<string, int> _index;
 
         public DataReaderEnumerable(IDbCommand command, Func<IDbConnection> createConnection)
             : this(command, createConnection, null)
         {
         }
 
-        public DataReaderEnumerable(IDbCommand command, Func<IDbConnection> createConnection, IDictionary<string, int> index)
+        public DataReaderEnumerable(IDbCommand command, Func<IDbConnection> createConnection,
+                                    IDictionary<string, int> index)
         {
             _command = command;
             _createConnection = createConnection;
             _index = index;
         }
 
-        public DataReaderEnumerable(IDbCommand command, IDbTransaction transaction, IDictionary<string, int> index) : this(command, () => transaction.Connection, index)
+        public DataReaderEnumerable(IDbCommand command, IDbTransaction transaction, IDictionary<string, int> index)
+            : this(command, () => transaction.Connection, index)
         {
             _transaction = transaction;
         }
+
+        #region IEnumerable<IDictionary<string,object>> Members
 
         public IEnumerator<IDictionary<string, object>> GetEnumerator()
         {
@@ -59,33 +59,39 @@ namespace Simple.Data.Ado
             return new DataReaderEnumerator(command, _index, Cache, CacheIndex);
         }
 
-        private void Cache(IEnumerable<IDictionary<string,object>> cache)
-        {
-            Interlocked.CompareExchange(ref _cache, cache, null);
-        }
-
-        private void CacheIndex(IDictionary<string,int> index)
-        {
-            Interlocked.CompareExchange(ref _index, index, null);
-        }
-
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
         }
 
+        #endregion
+
+        private void Cache(IEnumerable<IDictionary<string, object>> cache)
+        {
+            Interlocked.CompareExchange(ref _cache, cache, null);
+        }
+
+        private void CacheIndex(IDictionary<string, int> index)
+        {
+            Interlocked.CompareExchange(ref _index, index, null);
+        }
+
+        #region Nested type: DataReaderEnumerator
+
         private class DataReaderEnumerator : IEnumerator<IDictionary<string, object>>
         {
-            private readonly IDisposable _connectionDisposable;
-            private IDictionary<string, int> _index;
-            private readonly IDbCommand _command;
-            private IList<IDictionary<string,object>> _cache = new List<IDictionary<string, object>>(); 
             private readonly Action<IEnumerable<IDictionary<string, object>>> _cacheAction;
             private readonly Action<IDictionary<string, int>> _cacheIndexAction;
-            private IDataReader _reader;
+            private readonly IDbCommand _command;
+            private readonly IDisposable _connectionDisposable;
+            private IList<IDictionary<string, object>> _cache = new List<IDictionary<string, object>>();
             private IDictionary<string, object> _current;
+            private IDictionary<string, int> _index;
+            private IDataReader _reader;
 
-            public DataReaderEnumerator(IDbCommand command, IDictionary<string, int> index, Action<IEnumerable<IDictionary<string, object>>> cacheAction, Action<IDictionary<string, int>> cacheIndexAction)
+            public DataReaderEnumerator(IDbCommand command, IDictionary<string, int> index,
+                                        Action<IEnumerable<IDictionary<string, object>>> cacheAction,
+                                        Action<IDictionary<string, int>> cacheIndexAction)
             {
                 _command = command;
                 _cacheAction = cacheAction;
@@ -93,6 +99,8 @@ namespace Simple.Data.Ado
                 _connectionDisposable = _command.Connection.MaybeDisposable();
                 _index = index;
             }
+
+            #region IEnumerator<IDictionary<string,object>> Members
 
             public void Dispose()
             {
@@ -114,6 +122,30 @@ namespace Simple.Data.Ado
 
                 return _reader.Read() ? SetCurrent() : EndRead();
             }
+
+            public void Reset()
+            {
+                if (_reader != null) _reader.Dispose();
+                if (_cache != null)
+                    _cache.Clear();
+                ExecuteReader();
+            }
+
+            public IDictionary<string, object> Current
+            {
+                get
+                {
+                    if (_current == null) throw new InvalidOperationException();
+                    return _current;
+                }
+            }
+
+            object IEnumerator.Current
+            {
+                get { return Current; }
+            }
+
+            #endregion
 
             private bool SetCurrent()
             {
@@ -160,28 +192,8 @@ namespace Simple.Data.Ado
                     _cacheIndexAction(_index);
                 }
             }
-
-            public void Reset()
-            {
-                if (_reader != null) _reader.Dispose();
-                if (_cache != null)
-                    _cache.Clear();
-                ExecuteReader();
-            }
-
-            public IDictionary<string, object> Current
-            {
-                get
-                {
-                    if (_current == null) throw new InvalidOperationException();
-                    return _current;
-                }
-            }
-
-            object IEnumerator.Current
-            {
-                get { return Current; }
-            }
         }
+
+        #endregion
     }
 }

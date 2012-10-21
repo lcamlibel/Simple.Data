@@ -1,48 +1,60 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
-using System.Text;
+using Simple.Data.Ado.Schema;
 
 namespace Simple.Data.Ado
 {
-    using System.Data;
-    using Schema;
-
-    class BulkUpdater : IBulkUpdater
+    internal class BulkUpdater : IBulkUpdater
     {
-        public int Update(AdoAdapter adapter, string tableName, IList<IDictionary<string, object>> data, IDbTransaction transaction)
+        #region IBulkUpdater Members
+
+        public int Update(AdoAdapter adapter, string tableName, IList<IDictionary<string, object>> data,
+                          IDbTransaction transaction)
         {
             return Update(adapter, tableName, data, adapter.GetKeyNames(tableName).ToList(), transaction);
         }
 
-        public int Update(AdoAdapter adapter, string tableName, IList<IDictionary<string, object>> data, IEnumerable<string> criteriaFieldNames, IDbTransaction transaction)
+        public int Update(AdoAdapter adapter, string tableName, IList<IDictionary<string, object>> data,
+                          IEnumerable<string> criteriaFieldNames, IDbTransaction transaction)
         {
             int count = 0;
-            if (data == null || !data.Any()) 
+            if (data == null || !data.Any())
                 return count;
 
-            var criteriaFieldNameList = criteriaFieldNames.ToList();
-            if (criteriaFieldNameList.Count == 0) throw new NotSupportedException("Adapter does not support key-based update for this object.");
+            List<string> criteriaFieldNameList = criteriaFieldNames.ToList();
+            if (criteriaFieldNameList.Count == 0)
+                throw new NotSupportedException("Adapter does not support key-based update for this object.");
 
-            if (!AllRowsHaveSameKeys(data)) throw new SimpleDataException("Records have different structures. Bulk updates are only valid on consistent records.");
-            var table = adapter.GetSchema().FindTable(tableName);
+            if (!AllRowsHaveSameKeys(data))
+                throw new SimpleDataException(
+                    "Records have different structures. Bulk updates are only valid on consistent records.");
+            Table table = adapter.GetSchema().FindTable(tableName);
 
             var exampleRow = new Dictionary<string, object>(data.First(), HomogenizedEqualityComparer.DefaultInstance);
 
-            var commandBuilder = new UpdateHelper(adapter.GetSchema()).GetUpdateCommand(tableName, exampleRow,
-                                                                    ExpressionHelper.CriteriaDictionaryToExpression(
-                                                                        tableName, GetCriteria(criteriaFieldNameList, exampleRow)));
+            ICommandBuilder commandBuilder = new UpdateHelper(adapter.GetSchema()).GetUpdateCommand(tableName,
+                                                                                                    exampleRow,
+                                                                                                    ExpressionHelper.
+                                                                                                        CriteriaDictionaryToExpression
+                                                                                                        (
+                                                                                                            tableName,
+                                                                                                            GetCriteria(
+                                                                                                                criteriaFieldNameList,
+                                                                                                                exampleRow)));
 
-            var connection = adapter.CreateConnection();
+            IDbConnection connection = adapter.CreateConnection();
             using (connection.MaybeDisposable())
-            using (var command = commandBuilder.GetRepeatableCommand(connection, adapter.Options as AdoOptions))
+            using (IDbCommand command = commandBuilder.GetRepeatableCommand(connection, adapter.Options as AdoOptions))
             {
                 if (transaction != null)
                 {
                     command.Transaction = transaction;
                 }
                 connection.OpenIfClosed();
-                var propertyToParameterMap = CreatePropertyToParameterMap(data, table, command);
+                Dictionary<string, IDbDataParameter> propertyToParameterMap = CreatePropertyToParameterMap(data, table,
+                                                                                                           command);
 
                 foreach (var row in data)
                 {
@@ -60,26 +72,30 @@ namespace Simple.Data.Ado
             return count;
         }
 
-        private static Dictionary<string, IDbDataParameter> CreatePropertyToParameterMap(IEnumerable<IDictionary<string, object>> data, Table table, IDbCommand command)
+        #endregion
+
+        private static Dictionary<string, IDbDataParameter> CreatePropertyToParameterMap(
+            IEnumerable<IDictionary<string, object>> data, Table table, IDbCommand command)
         {
             return data.First().Select(kvp => new
-            {
-                kvp.Key,
-                Value = GetDbDataParameter(table, command, kvp)
-            })
+                                                  {
+                                                      kvp.Key,
+                                                      Value = GetDbDataParameter(table, command, kvp)
+                                                  })
                 .Where(t => t.Value != null)
                 .ToDictionary(t => t.Key, t => t.Value);
         }
 
-        private static IDbDataParameter GetDbDataParameter(Table table, IDbCommand command, KeyValuePair<string, object> kvp)
+        private static IDbDataParameter GetDbDataParameter(Table table, IDbCommand command,
+                                                           KeyValuePair<string, object> kvp)
         {
             try
             {
                 return command.Parameters.Cast<IDbDataParameter>().
-                FirstOrDefault
-                (p =>
-                 p.SourceColumn ==
-                 table.FindColumn(kvp.Key).ActualName);
+                    FirstOrDefault
+                    (p =>
+                     p.SourceColumn ==
+                     table.FindColumn(kvp.Key).ActualName);
             }
             catch (UnresolvableObjectException)
             {
@@ -94,11 +110,12 @@ namespace Simple.Data.Ado
             return data.Skip(1).All(d => exemplar.SetEquals(d.Keys));
         }
 
-        private static Dictionary<string, object> GetCriteria(IEnumerable<string> keyFieldNames, IDictionary<string, object> record)
+        private static Dictionary<string, object> GetCriteria(IEnumerable<string> keyFieldNames,
+                                                              IDictionary<string, object> record)
         {
             var criteria = new Dictionary<string, object>();
 
-            foreach (var keyFieldName in keyFieldNames)
+            foreach (string keyFieldName in keyFieldNames)
             {
                 if (!record.ContainsKey(keyFieldName))
                 {

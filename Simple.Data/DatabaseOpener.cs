@@ -1,17 +1,21 @@
-﻿namespace Simple.Data
-{
-    using System;
-    using System.Threading;
+﻿using System;
+using System.Threading;
 
+namespace Simple.Data
+{
     internal class DatabaseOpener : IDatabaseOpener
     {
         private static readonly IAdapterFactory AdapterFactory = new CachingAdapterFactory();
-        private static readonly ThreadLocal<DatabaseOpenerMethods> LocalOpenMethods = new ThreadLocal<DatabaseOpenerMethods>(() => new DatabaseOpenerMethods());
+
+        private static readonly ThreadLocal<DatabaseOpenerMethods> LocalOpenMethods =
+            new ThreadLocal<DatabaseOpenerMethods>(() => new DatabaseOpenerMethods());
 
         protected static DatabaseOpenerMethods OpenMethods
         {
             get { return LocalOpenMethods.Value; }
         }
+
+        #region IDatabaseOpener Members
 
         public dynamic OpenDefault()
         {
@@ -48,6 +52,8 @@
             ((CachingAdapterFactory) AdapterFactory).Reset();
         }
 
+        #endregion
+
         public static void UseMockDatabase(Database database)
         {
             OpenMethods.UseMockDatabase(database);
@@ -70,27 +76,39 @@
 
         internal static Database OpenDefaultMethod()
         {
-            return new Database(AdapterFactory.Create("Ado", new { ConnectionName = "Simple.Data.Properties.Settings.DefaultConnectionString" }));
+            return
+                new Database(AdapterFactory.Create("Ado",
+                                                   new
+                                                       {
+                                                           ConnectionName =
+                                                       "Simple.Data.Properties.Settings.DefaultConnectionString"
+                                                       }));
         }
 
         internal static Database OpenFileMethod(string filename)
         {
-            return new Database(AdapterFactory.Create("Ado", new { Filename = filename }));
+            return new Database(AdapterFactory.Create("Ado", new {Filename = filename}));
         }
 
         internal static Database OpenConnectionMethod(string connectionString)
         {
-            return new Database(AdapterFactory.Create("Ado", new { ConnectionString = connectionString }));
+            return new Database(AdapterFactory.Create("Ado", new {ConnectionString = connectionString}));
         }
 
         internal static Database OpenConnectionMethod(string connectionString, string providerName)
         {
-            return new Database(AdapterFactory.Create("Ado", new { ConnectionString = connectionString, ProviderName = providerName }));
+            return
+                new Database(AdapterFactory.Create("Ado",
+                                                   new
+                                                       {
+                                                           ConnectionString = connectionString,
+                                                           ProviderName = providerName
+                                                       }));
         }
 
         internal static Database OpenNamedConnectionMethod(string connectionName)
         {
-            return new Database(AdapterFactory.Create("Ado", new { ConnectionName = connectionName }));
+            return new Database(AdapterFactory.Create("Ado", new {ConnectionName = connectionName}));
         }
 
         internal static Database OpenMethod(string adapterName, object settings)

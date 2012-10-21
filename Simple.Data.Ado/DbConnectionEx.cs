@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Data;
 
 namespace Simple.Data.Ado
 {
-    using System.Data;
-
     public static class DbConnectionEx
     {
         public static void OpenIfClosed(this IDbConnection connection)
@@ -21,7 +16,7 @@ namespace Simple.Data.Ado
         {
             if (options == null || options.CommandTimeout < 0) return connection.CreateCommand();
 
-            var command = connection.CreateCommand();
+            IDbCommand command = connection.CreateCommand();
             command.CommandTimeout = options.CommandTimeout;
             return command;
         }

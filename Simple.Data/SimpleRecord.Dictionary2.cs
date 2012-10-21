@@ -1,12 +1,12 @@
-﻿using System;
+﻿using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Simple.Data
 {
     sealed partial class SimpleRecord : IDictionary<string, object>
     {
+        #region IDictionary<string,object> Members
+
         IEnumerator<KeyValuePair<string, object>> IEnumerable<KeyValuePair<string, object>>.GetEnumerator()
         {
             return _data.GetEnumerator();
@@ -83,9 +83,11 @@ namespace Simple.Data
             get { return _data.Values; }
         }
 
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+        IEnumerator IEnumerable.GetEnumerator()
         {
             return _data.GetEnumerator();
         }
+
+        #endregion
     }
 }

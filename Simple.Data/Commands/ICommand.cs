@@ -6,7 +6,7 @@ namespace Simple.Data.Commands
     /// <summary>
     /// Provides the execution for methods invoked on <see cref="DynamicTable"/>.
     /// </summary>
-    interface ICommand
+    internal interface ICommand
     {
         /// <summary>
         /// Determines whether the instance is able to handle the specified method.
@@ -28,12 +28,12 @@ namespace Simple.Data.Commands
         object Execute(DataStrategy dataStrategy, DynamicTable table, InvokeMemberBinder binder, object[] args);
     }
 
-    interface IQueryCompatibleCommand
+    internal interface IQueryCompatibleCommand
     {
         object Execute(DataStrategy dataStrategy, SimpleQuery query, InvokeMemberBinder binder, object[] args);
     }
 
-    interface ICreateDelegate
+    internal interface ICreateDelegate
     {
         Func<object[], object> CreateDelegate(DataStrategy dataStrategy, DynamicTable table, InvokeMemberBinder binder,
                                               object[] args);

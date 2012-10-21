@@ -1,16 +1,16 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
-using System.Linq.Expressions;
 using Simple.Data.Extensions;
 
 namespace Simple.Data.Commands
 {
-    using System.Collections;
-
-    class InsertCommand : ICommand
+    internal class InsertCommand : ICommand
     {
+        #region ICommand Members
+
         public bool IsCommandFor(string method)
         {
             return method.Equals("insert", StringComparison.InvariantCultureIgnoreCase);
@@ -18,16 +18,19 @@ namespace Simple.Data.Commands
 
         public object Execute(DataStrategy dataStrategy, DynamicTable table, InvokeMemberBinder binder, object[] args)
         {
-            var result = DoInsert(binder, args, dataStrategy, table.GetQualifiedName());
+            object result = DoInsert(binder, args, dataStrategy, table.GetQualifiedName());
 
             return ResultHelper.TypeResult(result, table, dataStrategy);
         }
 
-        private static object DoInsert(InvokeMemberBinder binder, object[] args, DataStrategy dataStrategy, string tableName)
+        #endregion
+
+        private static object DoInsert(InvokeMemberBinder binder, object[] args, DataStrategy dataStrategy,
+                                       string tableName)
         {
             if (binder.HasSingleUnnamedArgument())
             {
-                return InsertEntity(args[0], dataStrategy, tableName, (r,e) => false, !binder.IsResultDiscarded());
+                return InsertEntity(args[0], dataStrategy, tableName, (r, e) => false, !binder.IsResultDiscarded());
             }
 
             if (args.Length == 2)
@@ -41,12 +44,15 @@ namespace Simple.Data.Commands
             return InsertDictionary(binder, args, dataStrategy, tableName);
         }
 
-        private static object InsertDictionary(InvokeMemberBinder binder, IEnumerable<object> args, DataStrategy dataStrategy, string tableName)
+        private static object InsertDictionary(InvokeMemberBinder binder, IEnumerable<object> args,
+                                               DataStrategy dataStrategy, string tableName)
         {
-            return dataStrategy.Run.Insert(tableName, binder.NamedArgumentsToDictionary(args), !binder.IsResultDiscarded());
+            return dataStrategy.Run.Insert(tableName, binder.NamedArgumentsToDictionary(args),
+                                           !binder.IsResultDiscarded());
         }
 
-        private static object InsertEntity(object entity, DataStrategy dataStrategy, string tableName, ErrorCallback onError, bool resultRequired)
+        private static object InsertEntity(object entity, DataStrategy dataStrategy, string tableName,
+                                           ErrorCallback onError, bool resultRequired)
         {
             var dictionary = entity as IDictionary<string, object>;
             if (dictionary != null)
@@ -59,9 +65,9 @@ namespace Simple.Data.Commands
             var entityList = entity as IEnumerable;
             if (entityList != null)
             {
-                var array = entityList.Cast<object>().ToArray();
+                object[] array = entityList.Cast<object>().ToArray();
                 var rows = new List<IDictionary<string, object>>();
-                foreach (var o in array)
+                foreach (object o in array)
                 {
                     dictionary = (o as IDictionary<string, object>) ?? o.ObjectToDictionary();
                     if (dictionary.Count == 0)

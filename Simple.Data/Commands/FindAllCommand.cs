@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Dynamic;
-using System.Linq;
-using System.Text;
 
 namespace Simple.Data.Commands
 {
-    class FindAllCommand : ICommand
+    internal class FindAllCommand : ICommand
     {
+        #region ICommand Members
+
         /// <summary>
         /// Determines whether the instance is able to handle the specified method.
         /// </summary>
@@ -32,10 +31,12 @@ namespace Simple.Data.Commands
         {
             if (args.Length == 1 && args[0] is SimpleExpression)
             {
-                return new SimpleQuery(dataStrategy, table.GetQualifiedName()).Where((SimpleExpression)args[0]);
+                return new SimpleQuery(dataStrategy, table.GetQualifiedName()).Where((SimpleExpression) args[0]);
             }
 
             throw new BadExpressionException("FindAll only accepts a criteria expression.");
         }
+
+        #endregion
     }
 }

@@ -1,8 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using ResultSet = System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, object>>>;
+﻿using System.Collections.Generic;
+using ResultSet =
+    System.Collections.Generic.IEnumerable
+        <System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<string, object>>>;
 
 namespace Simple.Data
 {
@@ -14,6 +13,8 @@ namespace Simple.Data
     {
         bool IsValidFunction(string functionName);
         IEnumerable<ResultSet> Execute(string functionName, IDictionary<string, object> parameters);
-        IEnumerable<ResultSet> Execute(string functionName, IDictionary<string, object> parameters, IAdapterTransaction transaction);
+
+        IEnumerable<ResultSet> Execute(string functionName, IDictionary<string, object> parameters,
+                                       IAdapterTransaction transaction);
     }
 }

@@ -1,24 +1,21 @@
 ﻿using System;
 using System.Data;
 using System.Diagnostics;
-using System.Dynamic;
-using System.Text;
+using Simple.Data.Commands;
 
 namespace Simple.Data
 {
-    using Commands;
-
     /// <summary>
     /// Provides an abstraction over the underlying data adapter, if it is transaction-capable.
     /// </summary>
     public sealed class SimpleTransaction : DataStrategy, IDisposable
     {
+        private readonly IAdapterWithTransactions _adapter;
         private readonly DataStrategy _database;
         private readonly IsolationLevel _isolationLevel;
 
-        private readonly IAdapterWithTransactions _adapter;
-        private TransactionRunner _transactionRunner;
         private IAdapterTransaction _adapterTransaction;
+        private TransactionRunner _transactionRunner;
 
         private SimpleTransaction(IAdapterWithTransactions adapter, DataStrategy database, IsolationLevel isolationLevel)
         {
@@ -36,6 +33,49 @@ namespace Simple.Data
             _adapterTransaction = copy._adapterTransaction;
             _transactionRunner = copy._transactionRunner;
         }
+
+        internal DataStrategy Database
+        {
+            get { return _database; }
+        }
+
+        /// <summary>
+        /// Gets the name assigned to the transaction.
+        /// </summary>
+        /// <value>The name.</value>
+        public string Name
+        {
+            get { return _adapterTransaction.Name; }
+        }
+
+        public IAdapterTransaction AdapterTransaction
+        {
+            get { return _adapterTransaction; }
+        }
+
+        internal override RunStrategy Run
+        {
+            get { return _transactionRunner; }
+        }
+
+        #region IDisposable Members
+
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        public void Dispose()
+        {
+            try
+            {
+                _adapterTransaction.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine("IAdapterTransaction Dispose threw exception: " + ex.Message);
+            }
+        }
+
+        #endregion
 
         private void Begin()
         {
@@ -65,38 +105,17 @@ namespace Simple.Data
 
         public static SimpleTransaction Begin(DataStrategy database, IsolationLevel isolationLevel)
         {
-            var transaction = CreateTransaction(database, isolationLevel);
+            SimpleTransaction transaction = CreateTransaction(database, isolationLevel);
             transaction.Begin();
             return transaction;
         }
 
-        private static SimpleTransaction CreateTransaction(DataStrategy database, IsolationLevel isolationLevel = IsolationLevel.Unspecified)
+        private static SimpleTransaction CreateTransaction(DataStrategy database,
+                                                           IsolationLevel isolationLevel = IsolationLevel.Unspecified)
         {
             var adapterWithTransactions = database.GetAdapter() as IAdapterWithTransactions;
             if (adapterWithTransactions == null) throw new NotSupportedException();
             return new SimpleTransaction(adapterWithTransactions, database, isolationLevel);
-        }
-
-        internal DataStrategy Database
-        {
-            get
-            {
-                return _database;
-            }
-        }
-
-        /// <summary>
-        /// Gets the name assigned to the transaction.
-        /// </summary>
-        /// <value>The name.</value>
-        public string Name
-        {
-            get { return _adapterTransaction.Name; }
-        }
-
-        public IAdapterTransaction AdapterTransaction
-        {
-            get { return _adapterTransaction; }
         }
 
         /// <summary>
@@ -116,21 +135,6 @@ namespace Simple.Data
         }
 
 
-        /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-        /// </summary>
-        public void Dispose()
-        {
-            try
-            {
-                _adapterTransaction.Dispose();
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine("IAdapterTransaction Dispose threw exception: " + ex.Message);
-            }
-        }
-
         public override Adapter GetAdapter()
         {
             return _adapter as Adapter;
@@ -144,11 +148,6 @@ namespace Simple.Data
         protected internal override DataStrategy GetDatabase()
         {
             return _database;
-        }
-
-        internal override RunStrategy Run
-        {
-            get { return _transactionRunner; }
         }
 
         protected internal override DataStrategy Clone()

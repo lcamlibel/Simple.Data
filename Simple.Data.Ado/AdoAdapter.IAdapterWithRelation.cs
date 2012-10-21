@@ -1,10 +1,12 @@
-﻿namespace Simple.Data.Ado
-{
-    using System;
-    using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
+namespace Simple.Data.Ado
+{
     public partial class AdoAdapter : IAdapterWithRelation
     {
+        #region IAdapterWithRelation Members
+
         /// <summary>
         /// Determines whether a relation is valid.
         /// </summary>
@@ -30,5 +32,7 @@
         {
             return _relatedFinder.Value.FindRelated(tableName, row, relatedTableName);
         }
+
+        #endregion
     }
 }

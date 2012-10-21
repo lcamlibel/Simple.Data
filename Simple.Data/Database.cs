@@ -1,15 +1,12 @@
 ﻿using System;
-using System.Dynamic;
-using System.Linq;
-using System.Text;
-using System.Threading;
+using System.Configuration;
+using System.Data;
+using System.Diagnostics;
+using Simple.Data.Commands;
+using Simple.Data.Extensions;
 
 namespace Simple.Data
 {
-    using System.Configuration;
-    using System.Data;
-    using System.Diagnostics;
-
     /// <summary>
     /// The entry class for Simple.Data. Provides static methods for opening databases,
     /// and implements runtime dynamic functionality for resolving database-level objects.
@@ -20,6 +17,7 @@ namespace Simple.Data
 
         private static readonly IDatabaseOpener DatabaseOpener;
         private static IPluralizer _pluralizer;
+        private static TraceLevel? _traceLevel;
         private readonly Adapter _adapter;
         private readonly DatabaseRunner _databaseRunner;
 
@@ -27,22 +25,6 @@ namespace Simple.Data
         {
             DatabaseOpener = new DatabaseOpener();
             LoadTraceLevelFromConfig();
-        }
-
-        private static void LoadTraceLevelFromConfig()
-        {
-            _configuration =
-                (SimpleDataConfigurationSection) ConfigurationManager.GetSection("simpleData/simpleDataConfiguration");
-            if (_configuration != null)
-            {
-                Trace.TraceWarning("SimpleDataConfiguration section is obsolete; use system.diagnostics switches instead.");
-                TraceLevel = _configuration.TraceLevel;
-            }
-            else
-            {
-                var traceSwitch = new TraceSwitch("Simple.Data", "", TraceLevel.Info.ToString());
-                TraceLevel = traceSwitch.Level;
-            }
         }
 
         /// <summary>
@@ -61,11 +43,6 @@ namespace Simple.Data
             _databaseRunner = copy._databaseRunner;
         }
 
-        public override Adapter GetAdapter()
-        {
-            return _adapter;
-        }
-
         public static IDatabaseOpener Opener
         {
             get { return DatabaseOpener; }
@@ -79,6 +56,39 @@ namespace Simple.Data
         public static dynamic Default
         {
             get { return DatabaseOpener.OpenDefault(); }
+        }
+
+        public static TraceLevel TraceLevel
+        {
+            get { return _traceLevel ?? _configuration.TraceLevel; }
+            set { _traceLevel = value; }
+        }
+
+        internal override RunStrategy Run
+        {
+            get { return _databaseRunner; }
+        }
+
+        private static void LoadTraceLevelFromConfig()
+        {
+            _configuration =
+                (SimpleDataConfigurationSection) ConfigurationManager.GetSection("simpleData/simpleDataConfiguration");
+            if (_configuration != null)
+            {
+                Trace.TraceWarning(
+                    "SimpleDataConfiguration section is obsolete; use system.diagnostics switches instead.");
+                TraceLevel = _configuration.TraceLevel;
+            }
+            else
+            {
+                var traceSwitch = new TraceSwitch("Simple.Data", "", TraceLevel.Info.ToString());
+                TraceLevel = traceSwitch.Level;
+            }
+        }
+
+        public override Adapter GetAdapter()
+        {
+            return _adapter;
         }
 
         public SimpleTransaction BeginTransaction()
@@ -96,7 +106,7 @@ namespace Simple.Data
             return SimpleTransaction.Begin(this, isolationLevel);
         }
 
-        protected internal override bool ExecuteFunction(out object result, Commands.ExecuteFunctionCommand command)
+        protected internal override bool ExecuteFunction(out object result, ExecuteFunctionCommand command)
         {
             return command.Execute(out result);
         }
@@ -114,7 +124,7 @@ namespace Simple.Data
         public static void SetPluralizer(IPluralizer pluralizer)
         {
             _pluralizer = pluralizer;
-            Extensions.StringExtensions.SetPluralizer(pluralizer);
+            StringExtensions.SetPluralizer(pluralizer);
         }
 
         public static void ClearAdapterCache()
@@ -135,18 +145,6 @@ namespace Simple.Data
         public static void StopUsingMockAdapter()
         {
             Data.DatabaseOpener.StopUsingMock();
-        }
-
-        private static TraceLevel? _traceLevel;
-        public static TraceLevel TraceLevel
-        {
-            get { return _traceLevel ?? _configuration.TraceLevel; }
-            set { _traceLevel = value; }
-        }
-
-        internal override RunStrategy Run
-        {
-            get { return _databaseRunner; }
         }
 
         protected internal override DataStrategy Clone()

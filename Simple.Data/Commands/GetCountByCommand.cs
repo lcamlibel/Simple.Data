@@ -3,8 +3,10 @@ using System.Dynamic;
 
 namespace Simple.Data.Commands
 {
-    class GetCountByCommand : ICommand
+    internal class GetCountByCommand : ICommand
     {
+        #region ICommand Members
+
         /// <summary>
         /// Determines whether the instance is able to handle the specified method.
         /// </summary>
@@ -14,7 +16,8 @@ namespace Simple.Data.Commands
         /// </returns>
         public bool IsCommandFor(string method)
         {
-            return method.StartsWith("getcountby", StringComparison.InvariantCultureIgnoreCase) || method.StartsWith("get_count_by", StringComparison.InvariantCultureIgnoreCase);
+            return method.StartsWith("getcountby", StringComparison.InvariantCultureIgnoreCase) ||
+                   method.StartsWith("get_count_by", StringComparison.InvariantCultureIgnoreCase);
         }
 
         /// <summary>
@@ -27,8 +30,12 @@ namespace Simple.Data.Commands
         /// <returns></returns>
         public object Execute(DataStrategy dataStrategy, DynamicTable table, InvokeMemberBinder binder, object[] args)
         {
-            var criteria = ExpressionHelper.CriteriaDictionaryToExpression(table.GetQualifiedName(), MethodNameParser.ParseFromBinder(binder, args));
+            SimpleExpression criteria = ExpressionHelper.CriteriaDictionaryToExpression(table.GetQualifiedName(),
+                                                                                        MethodNameParser.ParseFromBinder
+                                                                                            (binder, args));
             return new SimpleQuery(dataStrategy, table.GetQualifiedName()).Where(criteria).Count();
         }
+
+        #endregion
     }
 }

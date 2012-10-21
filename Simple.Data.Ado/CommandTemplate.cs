@@ -11,12 +11,13 @@ namespace Simple.Data.Ado
 {
     public class CommandTemplate
     {
-        private readonly Func<IDbCommand, IDbParameterFactory> _createGetParameterFactoryFunc;
         private readonly string _commandText;
-        private readonly ParameterTemplate[] _parameters;
+        private readonly Func<IDbCommand, IDbParameterFactory> _createGetParameterFactoryFunc;
         private readonly Dictionary<string, int> _index;
+        private readonly ParameterTemplate[] _parameters;
 
-        public CommandTemplate(Func<IDbCommand, IDbParameterFactory> createGetParameterFactoryFunc, string commandText, ParameterTemplate[] parameterNames, Dictionary<string, int> index)
+        public CommandTemplate(Func<IDbCommand, IDbParameterFactory> createGetParameterFactoryFunc, string commandText,
+                               ParameterTemplate[] parameterNames, Dictionary<string, int> index)
         {
             _createGetParameterFactoryFunc = createGetParameterFactoryFunc;
             _commandText = commandText;
@@ -31,38 +32,44 @@ namespace Simple.Data.Ado
 
         public IDbCommand GetDbCommand(AdoAdapter adapter, IDbConnection connection, IEnumerable<object> parameterValues)
         {
-            var command = connection.CreateCommand(adapter.AdoOptions);
+            IDbCommand command = connection.CreateCommand(adapter.AdoOptions);
             command.CommandText = _commandText;
 
-            foreach (var parameter in CreateParameters(adapter.GetSchema(), command, parameterValues))
+            foreach (IDbDataParameter parameter in CreateParameters(adapter.GetSchema(), command, parameterValues))
             {
                 command.Parameters.Add(parameter);
             }
             return command;
         }
 
-        private IEnumerable<IDbDataParameter> CreateParameters(DatabaseSchema schema, IDbCommand command, IEnumerable<object> parameterValues)
+        private IEnumerable<IDbDataParameter> CreateParameters(DatabaseSchema schema, IDbCommand command,
+                                                               IEnumerable<object> parameterValues)
         {
-            var fixedParameters = _parameters.Where(pt => pt.Type == ParameterType.FixedValue).ToArray();
+            ParameterTemplate[] fixedParameters = _parameters.Where(pt => pt.Type == ParameterType.FixedValue).ToArray();
             if ((!parameterValues.Any(pv => pv != null)) && fixedParameters.Length == 0) yield break;
             parameterValues = parameterValues.Where(pv => pv != null);
 
-            foreach (var fixedParameter in fixedParameters)
+            foreach (ParameterTemplate fixedParameter in fixedParameters)
             {
                 yield return CreateParameter(command, fixedParameter, fixedParameter.FixedValue);
             }
-            
-            var columnParameters = _parameters.Where(pt => pt.Type != ParameterType.FixedValue).ToArray();
 
-            foreach (var parameter in parameterValues.Any(o => o is IEnumerable && !(o is string)) || parameterValues.Any(o => o is IRange)
-                       ? parameterValues.SelectMany((v, i) => CreateParameters(schema, command, columnParameters[i], v))
-                       : parameterValues.Select((v, i) => CreateParameter(command, columnParameters[i], v)))
+            ParameterTemplate[] columnParameters =
+                _parameters.Where(pt => pt.Type != ParameterType.FixedValue).ToArray();
+
+            foreach (
+                IDbDataParameter parameter in
+                    parameterValues.Any(o => o is IEnumerable && !(o is string)) ||
+                    parameterValues.Any(o => o is IRange)
+                        ? parameterValues.SelectMany((v, i) => CreateParameters(schema, command, columnParameters[i], v))
+                        : parameterValues.Select((v, i) => CreateParameter(command, columnParameters[i], v)))
             {
                 yield return parameter;
             }
         }
 
-        private IEnumerable<IDbDataParameter> CreateParameters(DatabaseSchema schema, IDbCommand command, ParameterTemplate parameterTemplate, object value)
+        private IEnumerable<IDbDataParameter> CreateParameters(DatabaseSchema schema, IDbCommand command,
+                                                               ParameterTemplate parameterTemplate, object value)
         {
             if (value == null || TypeHelper.IsKnownType(value.GetType()) || parameterTemplate.DbType == DbType.Binary)
             {
@@ -83,7 +90,7 @@ namespace Simple.Data.Ado
                     if (list != null)
                     {
                         var builder = new StringBuilder();
-                        var array = list.Cast<object>().ToArray();
+                        object[] array = list.Cast<object>().ToArray();
                         for (int i = 0; i < array.Length; i++)
                         {
                             builder.AppendFormat(",{0}_{1}", parameterTemplate.Name, i);
@@ -99,7 +106,8 @@ namespace Simple.Data.Ado
             }
         }
 
-        private static void RewriteSqlEqualityToInClause(DatabaseSchema schema, IDbCommand command, ParameterTemplate parameterTemplate, StringBuilder builder)
+        private static void RewriteSqlEqualityToInClause(DatabaseSchema schema, IDbCommand command,
+                                                         ParameterTemplate parameterTemplate, StringBuilder builder)
         {
             if (command.CommandText.Contains("!= " + parameterTemplate.Name))
             {
@@ -117,11 +125,12 @@ namespace Simple.Data.Ado
             }
         }
 
-        private IDbDataParameter CreateParameter(IDbCommand command, ParameterTemplate parameterTemplate, object value, string suffix = "")
+        private IDbDataParameter CreateParameter(IDbCommand command, ParameterTemplate parameterTemplate, object value,
+                                                 string suffix = "")
         {
-            var factory = _createGetParameterFactoryFunc(command);
-            var parameter = default(IDbDataParameter);
-            if(parameterTemplate.Column != null)
+            IDbParameterFactory factory = _createGetParameterFactoryFunc(command);
+            IDbDataParameter parameter;
+            if (parameterTemplate.Column != null)
             {
                 parameter = factory.CreateParameter(parameterTemplate.Name + suffix,
                                                     parameterTemplate.Column);

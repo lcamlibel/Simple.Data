@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Simple.Data
 {
@@ -11,6 +8,11 @@ namespace Simple.Data
     public interface IAdapterTransaction : IDisposable
     {
         /// <summary>
+        /// Gets the Name of the transaction, if named transactions are supported (e.g. SQL Server).
+        /// </summary>
+        string Name { get; }
+
+        /// <summary>
         /// Commits the underlying transaction.
         /// </summary>
         void Commit();
@@ -19,10 +21,5 @@ namespace Simple.Data
         /// Rollbacks the underlying transaction.
         /// </summary>
         void Rollback();
-
-        /// <summary>
-        /// Gets the Name of the transaction, if named transactions are supported (e.g. SQL Server).
-        /// </summary>
-        string Name { get; }
     }
 }

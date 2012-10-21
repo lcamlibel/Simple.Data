@@ -8,7 +8,7 @@ namespace Simple.Data.Extensions
         {
             var builder = new StringBuilder();
 
-            foreach (var c in source)
+            foreach (char c in source)
             {
                 if (char.IsUpper(c))
                 {

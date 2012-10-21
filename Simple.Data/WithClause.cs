@@ -2,19 +2,20 @@ namespace Simple.Data
 {
     public class WithClause : SimpleQueryClauseBase
     {
-        private readonly ObjectReference _objectReference;
         private readonly WithMode _mode;
-        private WithType _type;
+        private readonly ObjectReference _objectReference;
 
         public WithClause(ObjectReference objectReference) : this(objectReference, WithType.NotSpecified)
         {
         }
 
-        public WithClause(ObjectReference objectReference, WithType type) : this(objectReference, WithMode.NotSpecified, type)
+        public WithClause(ObjectReference objectReference, WithType type)
+            : this(objectReference, WithMode.NotSpecified, type)
         {
         }
 
-        public WithClause(ObjectReference objectReference, WithMode mode) : this(objectReference, mode, WithType.NotSpecified)
+        public WithClause(ObjectReference objectReference, WithMode mode)
+            : this(objectReference, mode, WithType.NotSpecified)
         {
         }
 
@@ -22,7 +23,7 @@ namespace Simple.Data
         {
             _objectReference = objectReference;
             _mode = mode;
-            _type = type;
+            Type = type;
         }
 
         public WithMode Mode
@@ -30,11 +31,7 @@ namespace Simple.Data
             get { return _mode; }
         }
 
-        public WithType Type
-        {
-            get { return _type; }
-            set { _type = value; }
-        }
+        public WithType Type { get; set; }
 
         public ObjectReference ObjectReference
         {

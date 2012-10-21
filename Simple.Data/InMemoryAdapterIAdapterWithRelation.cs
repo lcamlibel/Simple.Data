@@ -1,10 +1,12 @@
-﻿namespace Simple.Data
-{
-    using System.Collections.Generic;
-    using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 
+namespace Simple.Data
+{
     public partial class InMemoryAdapter : IAdapterWithRelation
     {
+        #region IAdapterWithRelation Members
+
         public bool IsValidRelation(string tableName, string relatedTableName)
         {
             return _joins.Any(
@@ -23,11 +25,13 @@
             return FindMaster(tableName, row, relatedTableName) ?? FindDetail(tableName, row, relatedTableName);
         }
 
+        #endregion
+
         private object FindMaster(string tableName, IDictionary<string, object> row, string relatedTableName)
         {
-            var master = _joins.FirstOrDefault(ji =>
-                                               _nameComparer.Equals(tableName, ji.MasterTableName) &&
-                                               _nameComparer.Equals(relatedTableName, ji.MasterPropertyName));
+            JoinInfo master = _joins.FirstOrDefault(ji =>
+                                                    _nameComparer.Equals(tableName, ji.MasterTableName) &&
+                                                    _nameComparer.Equals(relatedTableName, ji.MasterPropertyName));
             if (master != null)
             {
                 object result;
@@ -39,9 +43,9 @@
 
         private object FindDetail(string tableName, IDictionary<string, object> row, string relatedTableName)
         {
-            var detail = _joins.FirstOrDefault(ji =>
-                                               _nameComparer.Equals(tableName, ji.DetailTableName) &&
-                                               _nameComparer.Equals(relatedTableName, ji.DetailPropertyName));
+            JoinInfo detail = _joins.FirstOrDefault(ji =>
+                                                    _nameComparer.Equals(tableName, ji.DetailTableName) &&
+                                                    _nameComparer.Equals(relatedTableName, ji.DetailPropertyName));
             if (detail != null)
             {
                 object result;

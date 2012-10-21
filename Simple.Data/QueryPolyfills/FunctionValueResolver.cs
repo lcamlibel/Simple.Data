@@ -5,8 +5,8 @@ namespace Simple.Data.QueryPolyfills
 {
     internal class FunctionValueResolver : ValueResolver
     {
-        private readonly FunctionReference _reference;
         private readonly ValueResolver _argumentResolver;
+        private readonly FunctionReference _reference;
 
         protected internal FunctionValueResolver(FunctionReference reference)
         {
@@ -15,12 +15,13 @@ namespace Simple.Data.QueryPolyfills
         }
 
         public override void CopyValue(IDictionary<string, object> source, IDictionary<string, object> target,
-            IEnumerable<IDictionary<string, object>> sourceAggregationValues = null)
+                                       IEnumerable<IDictionary<string, object>> sourceAggregationValues = null)
         {
             target[_reference.GetAliasOrName()] = GetValue(source);
         }
 
-        public override object GetValue(IDictionary<string, object> source, IEnumerable<IDictionary<string, object>> sourceAggregationValues = null)
+        public override object GetValue(IDictionary<string, object> source,
+                                        IEnumerable<IDictionary<string, object>> sourceAggregationValues = null)
         {
             return ApplyFunction(_argumentResolver.GetValue(source));
         }

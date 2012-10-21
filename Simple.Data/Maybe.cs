@@ -1,9 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Simple.Data
 {
-    using System.Collections.Generic;
-
     public static class Maybe
     {
         public static Maybe<T> Some<T>(T value)
@@ -11,17 +10,62 @@ namespace Simple.Data
             return Maybe<T>.Some(value);
         }
     }
+
     public abstract class Maybe<T> : IEquatable<Maybe<T>>
     {
         public static readonly Maybe<T> None = new NoneClass();
+
+        public abstract bool HasValue { get; }
+
+        public abstract T Value { get; }
+
+        //public static implicit operator bool(Maybe<T> maybe)
+        //{
+        //    return maybe is SomeClass;
+        //}
+
+        #region IEquatable<Maybe<T>> Members
+
+        /// <summary>
+        /// Indicates whether the current object is equal to another object of the same type.
+        /// </summary>
+        /// <returns>
+        /// true if the current object is equal to the <paramref name="other"/> parameter; otherwise, false.
+        /// </returns>
+        /// <param name="other">An object to compare with this object.</param>
+        public abstract bool Equals(Maybe<T> other);
+
+        #endregion
+
         public static Maybe<T> Some(T value)
         {
             return new SomeClass(value);
         }
 
-        public abstract bool HasValue { get; }
+        public static implicit operator Maybe<T>(T value)
+        {
+            return new SomeClass(value);
+        }
 
-        class NoneClass : Maybe<T>
+        public static bool operator ==(Maybe<T> left, Maybe<T> right)
+        {
+            return Equals(left, right);
+        }
+
+        public static bool operator !=(Maybe<T> left, Maybe<T> right)
+        {
+            return !Equals(left, right);
+        }
+
+        public abstract override bool Equals(object obj);
+
+        public abstract override int GetHashCode();
+
+        public abstract override string ToString();
+
+        #region Nested type: NoneClass
+
+        private class NoneClass : Maybe<T>
         {
             public override T Value
             {
@@ -75,7 +119,11 @@ namespace Simple.Data
             }
         }
 
-        class SomeClass : Maybe<T>
+        #endregion
+
+        #region Nested type: SomeClass
+
+        private class SomeClass : Maybe<T>
         {
             private readonly T _value;
 
@@ -136,44 +184,6 @@ namespace Simple.Data
             }
         }
 
-        public abstract T Value
-        {
-            get;
-        }
-
-        //public static implicit operator bool(Maybe<T> maybe)
-        //{
-        //    return maybe is SomeClass;
-        //}
-
-        public static implicit operator Maybe<T>(T value)
-        {
-            return new SomeClass(value);
-        }
-
-        /// <summary>
-        /// Indicates whether the current object is equal to another object of the same type.
-        /// </summary>
-        /// <returns>
-        /// true if the current object is equal to the <paramref name="other"/> parameter; otherwise, false.
-        /// </returns>
-        /// <param name="other">An object to compare with this object.</param>
-        public abstract bool Equals(Maybe<T> other);
-
-        public static bool operator ==(Maybe<T> left, Maybe<T> right)
-        {
-            return Equals(left, right);
-        }
-
-        public static bool operator !=(Maybe<T> left, Maybe<T> right)
-        {
-            return !Equals(left, right);
-        }
-
-        public abstract override bool Equals(object obj);
-
-        public abstract override int GetHashCode();
-
-        public abstract override string ToString();
+        #endregion
     }
 }

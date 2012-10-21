@@ -1,28 +1,30 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace Simple.Data
 {
-    using System;
-    using System.Collections;
-    using System.Collections.Generic;
-    using System.Linq;
-
     internal static class ConcreteCollectionTypeCreator
     {
-        private static readonly List<Creator> _creators = new List<Creator>
-                                                              {
-                                                                  new GenericSetCreator(),
-                                                                  new GenericListCreator(),
-                                                                  new NonGenericListCreator()
-                                                              };
+        private static readonly List<Creator> Creators = new List<Creator>
+                                                             {
+                                                                 new GenericSetCreator(),
+                                                                 new GenericListCreator(),
+                                                                 new NonGenericListCreator()
+                                                             };
 
         public static bool IsCollectionType(Type type)
         {
-            return _creators.Any(c => c.IsCollectionType(type));
+            return Creators.Any(c => c.IsCollectionType(type));
         }
 
         public static bool TryCreate(Type type, IEnumerable items, out object result)
         {
-            return _creators.First(c => c.IsCollectionType(type)).TryCreate(type, items, out result);
+            return Creators.First(c => c.IsCollectionType(type)).TryCreate(type, items, out result);
         }
+
+        #region Nested type: Creator
 
         internal abstract class Creator
         {
@@ -36,7 +38,7 @@ namespace Simple.Data
                 if (value == null)
                     return true;
 
-                var valueType = value.GetType();
+                Type valueType = value.GetType();
 
                 if (type.IsAssignableFrom(valueType))
                 {
@@ -46,20 +48,20 @@ namespace Simple.Data
 
                 try
                 {
-                    var code = Convert.GetTypeCode(value);
+                    TypeCode code = Convert.GetTypeCode(value);
 
                     if (type.IsEnum)
                     {
                         return ConvertEnum(type, value, out result);
                     }
-                    if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+                    if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof (Nullable<>))
                     {
-                        result = System.Convert.ChangeType(value, Nullable.GetUnderlyingType(type));
+                        result = Convert.ChangeType(value, Nullable.GetUnderlyingType(type));
                         return true;
                     }
                     if (code != TypeCode.Object)
                     {
-                        result = System.Convert.ChangeType(value, type);
+                        result = Convert.ChangeType(value, type);
                         return true;
                     }
                     var data = value as IDictionary<string, object>;
@@ -80,9 +82,10 @@ namespace Simple.Data
 
             private static bool ConvertEnum(Type type, object value, out object result)
             {
-                if (value is string)
+                var s = value as string;
+                if (s != null)
                 {
-                    result = Enum.Parse(type, (string)value);
+                    result = Enum.Parse(type, s);
                     return true;
                 }
 
@@ -93,14 +96,10 @@ namespace Simple.Data
             protected bool TryConvertElements(Type type, IEnumerable items, out Array result)
             {
                 result = null;
-                List<object> list;
-                if (items == null)
-                    list = new List<object>();
-                else
-                    list = items.OfType<object>().ToList();
+                List<object> list = items == null ? new List<object>() : items.OfType<object>().ToList();
 
-                var array = Array.CreateInstance(type, list.Count);
-                for (var i = 0; i < array.Length; i++)
+                Array array = Array.CreateInstance(type, list.Count);
+                for (int i = 0; i < array.Length; i++)
                 {
                     object element;
                     if (!TryConvertElement(type, list[i], out element))
@@ -113,51 +112,34 @@ namespace Simple.Data
             }
         }
 
-        private class NonGenericListCreator : Creator
-        {
-            public override bool IsCollectionType(Type type)
-            {
-                if (type == typeof(string))
-                    return false;
+        #endregion
 
-                return type == typeof(IEnumerable) ||
-                       type == typeof(ICollection) ||
-                       type == typeof(IList) ||
-                       type == typeof(ArrayList);
-            }
-
-            public override bool TryCreate(Type type, IEnumerable items, out object result)
-            {
-                var list = new ArrayList(items.OfType<object>().ToList());
-                result = list;
-                return true;
-            }
-        }
+        #region Nested type: GenericListCreator
 
         private class GenericListCreator : Creator
         {
-            private static readonly Type _openListType = typeof(List<>);
+            private static readonly Type OpenListType = typeof (List<>);
 
             public override bool IsCollectionType(Type type)
             {
                 if (!type.IsGenericType)
                     return false;
 
-                var genericTypeDef = type.GetGenericTypeDefinition();
+                Type genericTypeDef = type.GetGenericTypeDefinition();
                 if (genericTypeDef.GetGenericArguments().Length != 1)
                     return false;
 
-                return genericTypeDef == typeof(IEnumerable<>) ||
-                       genericTypeDef == typeof(ICollection<>) ||
-                       genericTypeDef == typeof(IList<>) ||
-                       genericTypeDef == typeof(List<>);
+                return genericTypeDef == typeof (IEnumerable<>) ||
+                       genericTypeDef == typeof (ICollection<>) ||
+                       genericTypeDef == typeof (IList<>) ||
+                       genericTypeDef == typeof (List<>);
             }
 
             public override bool TryCreate(Type type, IEnumerable items, out object result)
             {
                 result = null;
-                var elementType = GetElementType(type);
-                var listType = _openListType.MakeGenericType(elementType);
+                Type elementType = GetElementType(type);
+                Type listType = OpenListType.MakeGenericType(elementType);
                 Array elements;
                 if (!TryConvertElements(elementType, items, out elements))
                     return false;
@@ -172,28 +154,32 @@ namespace Simple.Data
             }
         }
 
+        #endregion
+
+        #region Nested type: GenericSetCreator
+
         private class GenericSetCreator : Creator
         {
-            private static readonly Type _openSetType = typeof(HashSet<>);
+            private static readonly Type OpenSetType = typeof (HashSet<>);
 
             public override bool IsCollectionType(Type type)
             {
                 if (!type.IsGenericType)
                     return false;
 
-                var genericTypeDef = type.GetGenericTypeDefinition();
+                Type genericTypeDef = type.GetGenericTypeDefinition();
                 if (genericTypeDef.GetGenericArguments().Length != 1)
                     return false;
 
-                return genericTypeDef == typeof(ISet<>) ||
-                       genericTypeDef == typeof(HashSet<>);
+                return genericTypeDef == typeof (ISet<>) ||
+                       genericTypeDef == typeof (HashSet<>);
             }
 
             public override bool TryCreate(Type type, IEnumerable items, out object result)
             {
                 result = null;
-                var elementType = GetElementType(type);
-                var setType = _openSetType.MakeGenericType(elementType);
+                Type elementType = GetElementType(type);
+                Type setType = OpenSetType.MakeGenericType(elementType);
                 Array elements;
                 if (!TryConvertElements(elementType, items, out elements))
                     return false;
@@ -207,5 +193,32 @@ namespace Simple.Data
                 return type.GetGenericArguments()[0];
             }
         }
+
+        #endregion
+
+        #region Nested type: NonGenericListCreator
+
+        private class NonGenericListCreator : Creator
+        {
+            public override bool IsCollectionType(Type type)
+            {
+                if (type == typeof (string))
+                    return false;
+
+                return type == typeof (IEnumerable) ||
+                       type == typeof (ICollection) ||
+                       type == typeof (IList) ||
+                       type == typeof (ArrayList);
+            }
+
+            public override bool TryCreate(Type type, IEnumerable items, out object result)
+            {
+                var list = new ArrayList(items.OfType<object>().ToList());
+                result = list;
+                return true;
+            }
+        }
+
+        #endregion
     }
 }

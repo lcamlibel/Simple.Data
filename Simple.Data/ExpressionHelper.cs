@@ -5,21 +5,26 @@ namespace Simple.Data
 {
     public class ExpressionHelper
     {
-        public static SimpleExpression CriteriaDictionaryToExpression(string tableName, IEnumerable<KeyValuePair<string, object>> dictionary)
+        public static SimpleExpression CriteriaDictionaryToExpression(string tableName,
+                                                                      IEnumerable<KeyValuePair<string, object>>
+                                                                          dictionary)
         {
-            if (dictionary.Count() == 1)
+            var keyValuePairs = dictionary as KeyValuePair<string, object>[] ?? dictionary.ToArray();
+            if (keyValuePairs.Count() == 1)
             {
-                return CriteriaPairToExpression(tableName, dictionary.Single());
+                return CriteriaPairToExpression(tableName, keyValuePairs.Single());
             }
-            
-            return new SimpleExpression(CriteriaPairToExpression(tableName, dictionary.First()),
-                                        CriteriaDictionaryToExpression(tableName, dictionary.Skip(1)),
+
+            return new SimpleExpression(CriteriaPairToExpression(tableName, keyValuePairs.First()),
+                                        CriteriaDictionaryToExpression(tableName, keyValuePairs.Skip(1)),
                                         SimpleExpressionType.And);
         }
 
-        public static SimpleExpression CriteriaDictionaryToExpression(ObjectReference table, IEnumerable<KeyValuePair<string, object>> dictionary)
+        public static SimpleExpression CriteriaDictionaryToExpression(ObjectReference table,
+                                                                      IEnumerable<KeyValuePair<string, object>>
+                                                                          dictionary)
         {
-            var list = dictionary.ToList();
+            List<KeyValuePair<string, object>> list = dictionary.ToList();
             if (list.Count == 1)
             {
                 return CriteriaPairToExpression(table, list[0]);
@@ -32,10 +37,12 @@ namespace Simple.Data
 
         private static SimpleExpression CriteriaPairToExpression(string tableName, KeyValuePair<string, object> pair)
         {
-            return new SimpleExpression(new ObjectReference(pair.Key, new ObjectReference(tableName)), pair.Value, SimpleExpressionType.Equal);
+            return new SimpleExpression(new ObjectReference(pair.Key, new ObjectReference(tableName)), pair.Value,
+                                        SimpleExpressionType.Equal);
         }
 
-        private static SimpleExpression CriteriaPairToExpression(ObjectReference table, KeyValuePair<string, object> pair)
+        private static SimpleExpression CriteriaPairToExpression(ObjectReference table,
+                                                                 KeyValuePair<string, object> pair)
         {
             return new SimpleExpression(new ObjectReference(pair.Key, table), pair.Value, SimpleExpressionType.Equal);
         }

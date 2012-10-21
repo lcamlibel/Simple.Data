@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using Simple.Data.Extensions;
 
@@ -9,12 +8,12 @@ namespace Simple.Data.Ado.Schema
     public class Table : IEquatable<Table>
     {
         private readonly string _actualName;
-        private readonly string _schema;
-        private readonly TableType _type;
         private readonly DatabaseSchema _databaseSchema;
         private readonly Lazy<ColumnCollection> _lazyColumns;
-        private readonly Lazy<Key> _lazyPrimaryKey;
         private readonly Lazy<ForeignKeyCollection> _lazyForeignKeys;
+        private readonly Lazy<Key> _lazyPrimaryKey;
+        private readonly string _schema;
+        private readonly TableType _type;
 
         public Table(string name, string schema, TableType type)
         {
@@ -70,7 +69,8 @@ namespace Simple.Data.Ado.Schema
             {
                 return _schema == null
                            ? _databaseSchema.QuoteObjectName(_actualName)
-                           : _databaseSchema.QuoteObjectName(_schema) + '.' + _databaseSchema.QuoteObjectName(_actualName);
+                           : _databaseSchema.QuoteObjectName(_schema) + '.' +
+                             _databaseSchema.QuoteObjectName(_actualName);
             }
         }
 
@@ -79,9 +79,38 @@ namespace Simple.Data.Ado.Schema
             get { return _lazyColumns.Value.AsEnumerable(); }
         }
 
+        public Key PrimaryKey
+        {
+            get { return _lazyPrimaryKey.Value; }
+        }
+
+        public ForeignKeyCollection ForeignKeys
+        {
+            get { return _lazyForeignKeys.Value; }
+        }
+
+        #region IEquatable<Table> Members
+
+        /// <summary>
+        /// Indicates whether the current object is equal to another object of the same type.
+        /// </summary>
+        /// <returns>
+        /// true if the current object is equal to the <paramref name="other"/> parameter; otherwise, false.
+        /// </returns>
+        /// <param name="other">An object to compare with this object.</param>
+        public bool Equals(Table other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(other._actualName, _actualName) && Equals(other._schema, _schema) &&
+                   Equals(other._type, _type);
+        }
+
+        #endregion
+
         public Column FindColumn(string columnName)
         {
-            var columns = _lazyColumns.Value;
+            ColumnCollection columns = _lazyColumns.Value;
             try
             {
                 return columns.Find(columnName);
@@ -94,7 +123,7 @@ namespace Simple.Data.Ado.Schema
 
         public bool TryFindColumn(string columnName, out Column column)
         {
-            var columns = _lazyColumns.Value;
+            ColumnCollection columns = _lazyColumns.Value;
             if (columns.Contains(columnName))
             {
                 column = columns.Find(columnName);
@@ -107,16 +136,6 @@ namespace Simple.Data.Ado.Schema
         public bool HasColumn(string columnName)
         {
             return _lazyColumns.Value.Contains(columnName);
-        }
-
-        public Key PrimaryKey
-        {
-            get { return _lazyPrimaryKey.Value; }
-        }
-
-        public ForeignKeyCollection ForeignKeys
-        {
-            get { return _lazyForeignKeys.Value; }
         }
 
         private ColumnCollection GetColumns()
@@ -142,7 +161,7 @@ namespace Simple.Data.Ado.Schema
             //var keys = _databaseSchema.SchemaProvider.GetSchema("FOREIGN_KEYS", ActualName).AsEnumerable()
             //    .GroupBy(row => row["UNIQUE_TABLE_NAME"].ToString());
 
-            foreach (var key in _databaseSchema.SchemaProvider.GetForeignKeys(this))
+            foreach (ForeignKey key in _databaseSchema.SchemaProvider.GetForeignKeys(this))
             {
                 //var columns = key.OrderBy(row => (int)row["ORDINAL_POSITION"]).Select(row => row["COLUMN_NAME"].ToString()).ToArray();
                 //var uniqueColumns = key.OrderBy(row => (int)row["ORDINAL_POSITION"]).Select(row => row["UNIQUE_COLUMN_NAME"].ToString()).ToArray();
@@ -154,14 +173,16 @@ namespace Simple.Data.Ado.Schema
 
         internal TableJoin GetMaster(string name)
         {
-            var table = _databaseSchema.FindTable(name);
+            Table table = _databaseSchema.FindTable(name);
 
-            var foreignKey =
-                this.ForeignKeys.FirstOrDefault(fk => fk.MasterTable.Schema == table.Schema && fk.MasterTable.Name == table.ActualName);
+            ForeignKey foreignKey =
+                ForeignKeys.FirstOrDefault(
+                    fk => fk.MasterTable.Schema == table.Schema && fk.MasterTable.Name == table.ActualName);
 
             if (foreignKey == null) return null;
 
-            return new TableJoin(table, table.FindColumn(foreignKey.UniqueColumns[0]), this, this.FindColumn(foreignKey.Columns[0]));
+            return new TableJoin(table, table.FindColumn(foreignKey.UniqueColumns[0]), this,
+                                 FindColumn(foreignKey.Columns[0]));
         }
 
         private string GetCommonColumnName(Table other)
@@ -174,27 +195,15 @@ namespace Simple.Data.Ado.Schema
 
         internal TableJoin GetDetail(string name)
         {
-            var table = DatabaseSchema.FindTable(name);
-            var foreignKey =
-                table.ForeignKeys.FirstOrDefault(fk => fk.MasterTable.Schema == this.Schema && fk.MasterTable.Name == this.ActualName);
+            Table table = DatabaseSchema.FindTable(name);
+            ForeignKey foreignKey =
+                table.ForeignKeys.FirstOrDefault(
+                    fk => fk.MasterTable.Schema == Schema && fk.MasterTable.Name == ActualName);
 
             if (foreignKey == null) return null;
 
-            return new TableJoin(this, this.FindColumn(foreignKey.UniqueColumns[0]), table, table.FindColumn(foreignKey.Columns[0]));
-        }
-
-        /// <summary>
-        /// Indicates whether the current object is equal to another object of the same type.
-        /// </summary>
-        /// <returns>
-        /// true if the current object is equal to the <paramref name="other"/> parameter; otherwise, false.
-        /// </returns>
-        /// <param name="other">An object to compare with this object.</param>
-        public bool Equals(Table other)
-        {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return Equals(other._actualName, _actualName) && Equals(other._schema, _schema) && Equals(other._type, _type);
+            return new TableJoin(this, FindColumn(foreignKey.UniqueColumns[0]), table,
+                                 table.FindColumn(foreignKey.Columns[0]));
         }
 
         /// <summary>

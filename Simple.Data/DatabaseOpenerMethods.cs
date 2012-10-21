@@ -1,15 +1,15 @@
+using System;
+
 namespace Simple.Data
 {
-    using System;
-
     internal class DatabaseOpenerMethods
     {
-        private Func<Database> _openDefault;
-        private Func<string, Database> _openFile;
+        private Func<string, object, Database> _open;
         private Func<string, Database> _openConnection;
         private Func<string, string, Database> _openConnectionWithProvider;
+        private Func<Database> _openDefault;
+        private Func<string, Database> _openFile;
         private Func<string, Database> _openNamedConnection;
-        private Func<string, object, Database> _open;
 
         public Func<Database> OpenDefaultImpl
         {

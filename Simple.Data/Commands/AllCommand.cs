@@ -3,8 +3,10 @@ using System.Dynamic;
 
 namespace Simple.Data.Commands
 {
-    class AllCommand : ICommand
+    internal class AllCommand : ICommand
     {
+        #region ICommand Members
+
         /// <summary>
         /// Determines whether the instance is able to handle the specified method.
         /// </summary>
@@ -29,5 +31,7 @@ namespace Simple.Data.Commands
         {
             return new SimpleQuery(dataStrategy, table.GetQualifiedName());
         }
+
+        #endregion
     }
 }

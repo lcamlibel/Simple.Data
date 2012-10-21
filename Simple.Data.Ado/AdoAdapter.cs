@@ -13,11 +13,11 @@ namespace Simple.Data.Ado
         private readonly AdoAdapterFinder _finder;
         private readonly ProviderHelper _providerHelper = new ProviderHelper();
         private CommandOptimizer _commandOptimizer = new CommandOptimizer();
+        private Func<IDbConnection, IDbConnection> _connectionModifier = connection => connection;
         private IConnectionProvider _connectionProvider;
         private Lazy<AdoAdapterRelatedFinder> _relatedFinder;
         private DatabaseSchema _schema;
         private IDbConnection _sharedConnection;
-        private Func<IDbConnection, IDbConnection> _connectionModifier = connection => connection;
 
         public AdoAdapter()
         {
@@ -33,8 +33,9 @@ namespace Simple.Data.Ado
                                 new CommandOptimizer();
         }
 
-        private AdoAdapter(IConnectionProvider connectionProvider, AdoAdapterFinder finder, ProviderHelper providerHelper,
-            Lazy<AdoAdapterRelatedFinder> relatedFinder, DatabaseSchema schema)
+        private AdoAdapter(IConnectionProvider connectionProvider, AdoAdapterFinder finder,
+                           ProviderHelper providerHelper,
+                           Lazy<AdoAdapterRelatedFinder> relatedFinder, DatabaseSchema schema)
         {
             _connectionProvider = connectionProvider;
             _finder = finder;
@@ -78,13 +79,6 @@ namespace Simple.Data.Ado
             get { return _connectionProvider.GetSchemaProvider(); }
         }
 
-        public override IDictionary<string, object> GetKey(string tableName, IDictionary<string, object> record)
-        {
-            var homogenizedRecord = new Dictionary<string, object>(record, HomogenizedEqualityComparer.DefaultInstance);
-            return GetKeyNames(tableName).ToDictionary(key => key,
-                                                            key => homogenizedRecord.ContainsKey(key) ? homogenizedRecord[key] : null);
-        }
-
         #region ICloneable Members
 
         public object Clone()
@@ -93,6 +87,16 @@ namespace Simple.Data.Ado
         }
 
         #endregion
+
+        public override IDictionary<string, object> GetKey(string tableName, IDictionary<string, object> record)
+        {
+            var homogenizedRecord = new Dictionary<string, object>(record, HomogenizedEqualityComparer.DefaultInstance);
+            return GetKeyNames(tableName).ToDictionary(key => key,
+                                                       key =>
+                                                       homogenizedRecord.ContainsKey(key)
+                                                           ? homogenizedRecord[key]
+                                                           : null);
+        }
 
         protected override void OnSetup()
         {
@@ -190,14 +194,18 @@ namespace Simple.Data.Ado
             return new AdoAdapterQueryRunner(this).RunQueryAsObservable(query, out unhandledClauses);
         }
 
-        public override IDictionary<string, object> Insert(string tableName, IDictionary<string, object> data, bool resultRequired)
+        public override IDictionary<string, object> Insert(string tableName, IDictionary<string, object> data,
+                                                           bool resultRequired)
         {
             return new AdoAdapterInserter(this).Insert(tableName, data, resultRequired);
         }
 
         public override IEnumerable<IDictionary<string, object>> InsertMany(string tableName,
                                                                             IEnumerable<IDictionary<string, object>>
-                                                                                data, Func<IDictionary<string,object>, Exception, bool> onError, bool resultRequired)
+                                                                                data,
+                                                                            Func
+                                                                                <IDictionary<string, object>, Exception,
+                                                                                bool> onError, bool resultRequired)
         {
             return new AdoAdapterInserter(this).InsertMany(tableName, data, onError, resultRequired);
         }
@@ -315,20 +323,33 @@ namespace Simple.Data.Ado
             return _schema ?? (_schema = DatabaseSchema.Get(_connectionProvider, _providerHelper));
         }
 
-        public override IDictionary<string, object> Upsert(string tableName, IDictionary<string, object> data, SimpleExpression criteria, bool resultRequired)
+        public override IDictionary<string, object> Upsert(string tableName, IDictionary<string, object> data,
+                                                           SimpleExpression criteria, bool resultRequired)
         {
             return new AdoAdapterUpserter(this).Upsert(tableName, data, criteria, resultRequired);
         }
 
-        public override IEnumerable<IDictionary<string, object>> UpsertMany(string tableName, IList<IDictionary<string, object>> list, bool isResultRequired, Func<IDictionary<string, object>, Exception, bool> errorCallback)
+        public override IEnumerable<IDictionary<string, object>> UpsertMany(string tableName,
+                                                                            IList<IDictionary<string, object>> list,
+                                                                            bool isResultRequired,
+                                                                            Func
+                                                                                <IDictionary<string, object>, Exception,
+                                                                                bool> errorCallback)
         {
             var upserter = new AdoAdapterUpserter(this);
             return upserter.UpsertMany(tableName, list, isResultRequired, errorCallback);
         }
 
-        public override IEnumerable<IDictionary<string, object>> UpsertMany(string tableName, IList<IDictionary<string, object>> list, IEnumerable<string> keyFieldNames, bool isResultRequired, Func<IDictionary<string, object>, Exception, bool> errorCallback)
+        public override IEnumerable<IDictionary<string, object>> UpsertMany(string tableName,
+                                                                            IList<IDictionary<string, object>> list,
+                                                                            IEnumerable<string> keyFieldNames,
+                                                                            bool isResultRequired,
+                                                                            Func
+                                                                                <IDictionary<string, object>, Exception,
+                                                                                bool> errorCallback)
         {
-            return new AdoAdapterUpserter(this).UpsertMany(tableName, list, keyFieldNames.ToArray(), isResultRequired, errorCallback);
+            return new AdoAdapterUpserter(this).UpsertMany(tableName, list, keyFieldNames.ToArray(), isResultRequired,
+                                                           errorCallback);
         }
 
         public string GetIdentityFunction()

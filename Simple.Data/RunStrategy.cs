@@ -1,8 +1,8 @@
+using System.Collections.Generic;
+using System.Linq;
+
 namespace Simple.Data
 {
-    using System.Collections.Generic;
-    using System.Linq;
-
     internal abstract class RunStrategy
     {
         protected abstract Adapter Adapter { get; }
@@ -17,13 +17,23 @@ namespace Simple.Data
 
         /// <summary>
         ///  Inserts a record into the specified "table".
-        ///  </summary><param name="tableName">Name of the table.</param><param name="data">The values to insert.</param><returns>If possible, return the newly inserted row, including any automatically-set values such as primary keys or timestamps.</returns>
-        internal abstract IEnumerable<IDictionary<string, object>> InsertMany(string tableName, IEnumerable<IDictionary<string, object>> enumerable, ErrorCallback onError, bool resultRequired);
+        ///  </summary><param name="tableName">Name of the table.</param><param name="enumerable">The values to insert.</param>
+        /// <param name="resultRequired"></param> 
+        ///   /// <param name="onError"></param> 
+        /// <returns>If possible, return the newly inserted row, including any automatically-set values such as primary keys or timestamps.</returns>
+        internal abstract IEnumerable<IDictionary<string, object>> InsertMany(string tableName,
+                                                                              IEnumerable<IDictionary<string, object>>
+                                                                                  enumerable, ErrorCallback onError,
+                                                                              bool resultRequired);
 
         /// <summary>
         ///  Inserts many records into the specified "table".
-        ///  </summary><param name="tableName">Name of the table.</param><param name="data">The values to insert.</param><returns>If possible, return the newly inserted row, including any automatically-set values such as primary keys or timestamps.</returns>
-        internal abstract IDictionary<string, object> Insert(string tableName, IDictionary<string, object> data, bool resultRequired);
+        ///  </summary><param name="tableName">Name of the table.</param>
+        /// <param name="data">The values to insert.</param>
+        /// <param name="resultRequired"></param> 
+        /// <returns>If possible, return the newly inserted row, including any automatically-set values such as primary keys or timestamps.</returns>
+        internal abstract IDictionary<string, object> Insert(string tableName, IDictionary<string, object> data,
+                                                             bool resultRequired);
 
         /// <summary>
         ///  Updates the specified "table" according to specified criteria.
@@ -35,31 +45,44 @@ namespace Simple.Data
         ///  </summary><param name="tableName">Name of the table.</param><param name="criteria">The expression to use as criteria for the delete operation.</param><returns>The number of records which were deleted.</returns>
         internal abstract int Delete(string tableName, SimpleExpression criteria);
 
-        internal abstract IDictionary<string, object> FindOne(string getQualifiedName, SimpleExpression criteriaExpression);
+        internal abstract IDictionary<string, object> FindOne(string getQualifiedName,
+                                                              SimpleExpression criteriaExpression);
 
         internal abstract int UpdateMany(string tableName, IList<IDictionary<string, object>> dataList);
 
-        internal abstract int UpdateMany(string tableName, IList<IDictionary<string, object>> dataList, IEnumerable<string> criteriaFieldNames);
+        internal abstract int UpdateMany(string tableName, IList<IDictionary<string, object>> dataList,
+                                         IEnumerable<string> criteriaFieldNames);
 
         internal abstract int UpdateMany(string tableName, IList<IDictionary<string, object>> newValuesList,
                                          IList<IDictionary<string, object>> originalValuesList);
 
-        internal abstract int Update(string tableName, IDictionary<string, object> newValuesDict, IDictionary<string, object> originalValuesDict);
+        internal abstract int Update(string tableName, IDictionary<string, object> newValuesDict,
+                                     IDictionary<string, object> originalValuesDict);
 
-        public abstract IEnumerable<IDictionary<string, object>> UpsertMany(string tableName, IList<IDictionary<string, object>> list, IEnumerable<string> keyFieldNames, bool isResultRequired, ErrorCallback errorCallback);
+        public abstract IEnumerable<IDictionary<string, object>> UpsertMany(string tableName,
+                                                                            IList<IDictionary<string, object>> list,
+                                                                            IEnumerable<string> keyFieldNames,
+                                                                            bool isResultRequired,
+                                                                            ErrorCallback errorCallback);
 
-        public abstract IDictionary<string,object> Upsert(string tableName, IDictionary<string, object> dict, SimpleExpression criteriaExpression, bool isResultRequired);
+        public abstract IDictionary<string, object> Upsert(string tableName, IDictionary<string, object> dict,
+                                                           SimpleExpression criteriaExpression, bool isResultRequired);
 
-        public abstract IEnumerable<IDictionary<string, object>> UpsertMany(string tableName, IList<IDictionary<string, object>> list, bool isResultRequired, ErrorCallback errorCallback);
+        public abstract IEnumerable<IDictionary<string, object>> UpsertMany(string tableName,
+                                                                            IList<IDictionary<string, object>> list,
+                                                                            bool isResultRequired,
+                                                                            ErrorCallback errorCallback);
 
-        public abstract IDictionary<string,object> Get(string tableName, object[] args);
+        public abstract IDictionary<string, object> Get(string tableName, object[] args);
 
-        public abstract IEnumerable<IDictionary<string, object>> RunQuery(SimpleQuery query, out IEnumerable<SimpleQueryClauseBase> unhandledClauses);
+        public abstract IEnumerable<IDictionary<string, object>> RunQuery(SimpleQuery query,
+                                                                          out IEnumerable<SimpleQueryClauseBase>
+                                                                              unhandledClauses);
 
         protected static Dictionary<string, object> CreateChangedValuesDict(
             IEnumerable<KeyValuePair<string, object>> newValuesDict, IDictionary<string, object> originalValuesDict)
         {
-            var changedValuesDict =
+            Dictionary<string, object> changedValuesDict =
                 newValuesDict.Where(
                     kvp =>
                     (!originalValuesDict.ContainsKey(kvp.Key)) || !(Equals(kvp.Value, originalValuesDict[kvp.Key])))
@@ -68,23 +91,21 @@ namespace Simple.Data
         }
 
         protected SimpleExpression CreateCriteriaFromOriginalValues(string tableName,
-                                                                           IDictionary<string, object> newValuesDict,
-                                                                           IDictionary<string, object>
-                                                                               originalValuesDict)
+                                                                    IDictionary<string, object> newValuesDict,
+                                                                    IDictionary<string, object>
+                                                                        originalValuesDict)
         {
-            var criteriaValues = Adapter.GetKey(tableName, originalValuesDict);
+            IDictionary<string, object> criteriaValues = Adapter.GetKey(tableName, originalValuesDict);
 
             foreach (var kvp in originalValuesDict
                 .Where(
                     originalKvp =>
                     newValuesDict.ContainsKey(originalKvp.Key) &&
-                    !(Equals(newValuesDict[originalKvp.Key], originalKvp.Value))))
+                    !(Equals(newValuesDict[originalKvp.Key], originalKvp.Value))).Where(kvp => !criteriaValues.ContainsKey(kvp.Key)))
             {
-                if (!criteriaValues.ContainsKey(kvp.Key))
-                {
-                    criteriaValues.Add(kvp);
-                }
-            };
+                criteriaValues.Add(kvp);
+            }
+            
 
             return ExpressionHelper.CriteriaDictionaryToExpression(tableName, criteriaValues);
         }

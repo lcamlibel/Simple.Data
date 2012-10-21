@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
@@ -8,8 +7,6 @@ using System.Text;
 
 namespace Simple.Data.Ado
 {
-    using System.Security;
-
     public static class TraceHelper
     {
         public static void WriteTrace(this IDbCommand command)
@@ -21,7 +18,7 @@ namespace Simple.Data.Ado
                 str.AppendLine();
                 str.AppendLine(command.CommandType.ToString());
                 str.AppendLine(command.CommandText);
-                foreach (var parameter in command.Parameters.OfType<DbParameter>())
+                foreach (DbParameter parameter in command.Parameters.OfType<DbParameter>())
                 {
                     str.AppendFormat("{0} ({1}) = {2}", parameter.ParameterName, parameter.DbType, parameter.Value);
                     str.AppendLine();

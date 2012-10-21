@@ -2,19 +2,20 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.Common;
 using System.Dynamic;
-using System.Linq;
+using Simple.Data.Ado.Schema;
 
 namespace Simple.Data.Ado
 {
-    class AdoAdapterGetter
+    internal class AdoAdapterGetter
     {
+        private readonly AdoAdapter _adapter;
+
         private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, CommandTemplate>> _commandCaches =
             new ConcurrentDictionary<string, ConcurrentDictionary<string, CommandTemplate>>();
-        private readonly AdoAdapter _adapter;
-        private readonly IDbTransaction _transaction;
+
         private readonly IDbConnection _connection;
+        private readonly IDbTransaction _transaction;
 
         public AdoAdapterGetter(AdoAdapter adapter) : this(adapter, null)
         {
@@ -32,31 +33,34 @@ namespace Simple.Data.Ado
             }
         }
 
-        public Func<object[],IDictionary<string,object>> CreateGetDelegate(string tableName, params object[] keyValues)
+        public Func<object[], IDictionary<string, object>> CreateGetDelegate(string tableName, params object[] keyValues)
         {
-            var primaryKey = _adapter.GetSchema().FindTable(tableName).PrimaryKey;
+            Key primaryKey = _adapter.GetSchema().FindTable(tableName).PrimaryKey;
             if (primaryKey == null) throw new InvalidOperationException("Table has no primary key.");
-            if (primaryKey.Length != keyValues.Length) throw new ArgumentException("Incorrect number of values for key.");
+            if (primaryKey.Length != keyValues.Length)
+                throw new ArgumentException("Incorrect number of values for key.");
 
 
-            var commandBuilder = new GetHelper(_adapter.GetSchema()).GetCommand(_adapter.GetSchema().FindTable(tableName), keyValues);
+            ICommandBuilder commandBuilder =
+                new GetHelper(_adapter.GetSchema()).GetCommand(_adapter.GetSchema().FindTable(tableName), keyValues);
 
-            var command = commandBuilder.GetCommand(_adapter.CreateConnection(), _adapter.AdoOptions);
+            IDbCommand command = commandBuilder.GetCommand(_adapter.CreateConnection(), _adapter.AdoOptions);
             command = _adapter.CommandOptimizer.OptimizeFindOne(command);
 
-            var commandTemplate =
+            CommandTemplate commandTemplate =
                 commandBuilder.GetCommandTemplate(
                     _adapter.GetSchema().FindTable(_adapter.GetSchema().BuildObjectName(tableName)));
 
             var cloneable = command as ICloneable;
             if (cloneable != null)
             {
-                return args => ExecuteSingletonQuery((IDbCommand)cloneable.Clone(), args, commandTemplate.Index);
+                return args => ExecuteSingletonQuery((IDbCommand) cloneable.Clone(), args, commandTemplate.Index);
             }
             return args => ExecuteSingletonQuery(commandTemplate, args);
         }
 
-        private IDictionary<string, object> ExecuteSingletonQuery(IDbCommand command, object[] parameterValues, IDictionary<string,int> index)
+        private IDictionary<string, object> ExecuteSingletonQuery(IDbCommand command, object[] parameterValues,
+                                                                  IDictionary<string, int> index)
         {
             for (int i = 0; i < command.Parameters.Count; i++)
             {
@@ -67,21 +71,23 @@ namespace Simple.Data.Ado
             return TryExecuteSingletonQuery(command.Connection, command, index);
         }
 
-        private IDictionary<string, object> ExecuteSingletonQuery(CommandTemplate commandTemplate, IEnumerable<object> parameterValues)
+        private IDictionary<string, object> ExecuteSingletonQuery(CommandTemplate commandTemplate,
+                                                                  IEnumerable<object> parameterValues)
         {
-            var connection = _connection ?? _adapter.CreateConnection();
-            var command = commandTemplate.GetDbCommand(_adapter, connection, parameterValues);
+            IDbConnection connection = _connection ?? _adapter.CreateConnection();
+            IDbCommand command = commandTemplate.GetDbCommand(_adapter, connection, parameterValues);
             command.Transaction = _transaction;
             return TryExecuteSingletonQuery(connection, command, commandTemplate.Index);
         }
 
-        private static IDictionary<string, object> TryExecuteSingletonQuery(IDbConnection connection, IDbCommand command, IDictionary<string, int> index)
+        private static IDictionary<string, object> TryExecuteSingletonQuery(IDbConnection connection, IDbCommand command,
+                                                                            IDictionary<string, int> index)
         {
             using (connection.MaybeDisposable())
             using (command)
             {
                 connection.OpenIfClosed();
-                using (var reader = command.TryExecuteReader())
+                using (IDataReader reader = command.TryExecuteReader())
                 {
                     if (reader.Read())
                     {
@@ -106,17 +112,20 @@ namespace Simple.Data.Ado
 
         public IDictionary<string, object> Get(string tableName, object[] parameterValues)
         {
-            var primaryKey = _adapter.GetSchema().FindTable(tableName).PrimaryKey;
+            Key primaryKey = _adapter.GetSchema().FindTable(tableName).PrimaryKey;
             if (primaryKey == null) throw new InvalidOperationException("Table has no primary key.");
-            if (primaryKey.Length != parameterValues.Length) throw new ArgumentException("Incorrect number of values for key.");
+            if (primaryKey.Length != parameterValues.Length)
+                throw new ArgumentException("Incorrect number of values for key.");
 
 
-            var commandBuilder = new GetHelper(_adapter.GetSchema()).GetCommand(_adapter.GetSchema().FindTable(tableName), parameterValues);
+            ICommandBuilder commandBuilder =
+                new GetHelper(_adapter.GetSchema()).GetCommand(_adapter.GetSchema().FindTable(tableName),
+                                                               parameterValues);
 
-            var command = commandBuilder.GetCommand(_adapter.CreateConnection(), _adapter.AdoOptions);
+            IDbCommand command = commandBuilder.GetCommand(_adapter.CreateConnection(), _adapter.AdoOptions);
             command = _adapter.CommandOptimizer.OptimizeFindOne(command);
 
-            var commandTemplate =
+            CommandTemplate commandTemplate =
                 commandBuilder.GetCommandTemplate(
                     _adapter.GetSchema().FindTable(_adapter.GetSchema().BuildObjectName(tableName)));
 

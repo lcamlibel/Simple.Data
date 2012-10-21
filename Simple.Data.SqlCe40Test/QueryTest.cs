@@ -15,7 +15,7 @@ namespace Simple.Data.SqlCe40Test
         public void ShouldSelectFromOneToTen()
         {
             var db = Database.Opener.OpenFile(DatabasePath);
-            var query = db.PagingTest.QueryById(1.to(100)).Take(10);
+            var query = db.PagingTest.QueryById(1.To(100)).Take(10);
             int index = 1;
             foreach (var row in query)
             {
@@ -29,7 +29,7 @@ namespace Simple.Data.SqlCe40Test
         {
             var db = Database.Opener.OpenFile(DatabasePath);
             Promise<int> count;
-            var query = db.PagingTest.QueryById(1.to(100)).WithTotalCount(out count).Take(10);
+            var query = db.PagingTest.QueryById(1.To(100)).WithTotalCount(out count).Take(10);
             int index = 1;
             foreach (var row in query)
             {
@@ -44,7 +44,7 @@ namespace Simple.Data.SqlCe40Test
         public void ShouldSelectFromElevenToTwenty()
         {
             var db = Database.Opener.OpenFile(DatabasePath);
-            var query = db.PagingTest.QueryById(1.to(100)).Skip(10).Take(10);
+            var query = db.PagingTest.QueryById(1.To(100)).Skip(10).Take(10);
             int index = 11;
             foreach (var row in query)
             {
@@ -57,7 +57,7 @@ namespace Simple.Data.SqlCe40Test
         public void ShouldSelectFromOneHundredToNinetyOne()
         {
             var db = Database.Opener.OpenFile(DatabasePath);
-            var query = db.PagingTest.QueryById(1.to(100)).OrderByDescending(db.PagingTest.Id).Skip(0).Take(10);
+            var query = db.PagingTest.QueryById(1.To(100)).OrderByDescending(db.PagingTest.Id).Skip(0).Take(10);
             int index = 100;
             foreach (var row in query)
             {

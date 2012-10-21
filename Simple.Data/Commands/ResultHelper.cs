@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using Simple.Data.Extensions;
 
 namespace Simple.Data.Commands
 {
-    using Extensions;
-
     internal static class ResultHelper
     {
         public static object TypeResult(object result, DynamicTable table, DataStrategy dataStrategy)
@@ -15,7 +12,8 @@ namespace Simple.Data.Commands
             if (dictionary != null) return dictionary.ToDynamicRecord(table.GetQualifiedName(), dataStrategy);
 
             var list = result as IEnumerable<IDictionary<string, object>>;
-            if (list != null) return new SimpleResultSet(list.Select(d => d.ToDynamicRecord(table.GetQualifiedName(), dataStrategy)));
+            if (list != null)
+                return new SimpleResultSet(list.Select(d => d.ToDynamicRecord(table.GetQualifiedName(), dataStrategy)));
 
             return null;
         }

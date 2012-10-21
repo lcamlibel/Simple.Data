@@ -1,9 +1,11 @@
+using System;
+
 namespace Simple.Data.Ado
 {
-    using System;
-
-    class FunctionNameConverter : IFunctionNameConverter
+    internal class FunctionNameConverter : IFunctionNameConverter
     {
+        #region IFunctionNameConverter Members
+
         public string ConvertToSqlName(string simpleFunctionName)
         {
             if (simpleFunctionName.Equals("length", StringComparison.InvariantCultureIgnoreCase))
@@ -16,5 +18,7 @@ namespace Simple.Data.Ado
             }
             return simpleFunctionName;
         }
+
+        #endregion
     }
 }

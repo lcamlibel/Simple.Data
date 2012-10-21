@@ -1,13 +1,15 @@
+using System;
+using System.Collections.Generic;
+using System.Dynamic;
+using System.Linq;
+using Simple.Data.Extensions;
+
 namespace Simple.Data.Commands
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Dynamic;
-    using System.Linq;
-    using Extensions;
-
-    class UpsertByCommand : ICommand
+    internal class UpsertByCommand : ICommand
     {
+        #region ICommand Members
+
         public bool IsCommandFor(string method)
         {
             return method.Homogenize().StartsWith("upsertby", StringComparison.InvariantCultureIgnoreCase);
@@ -20,42 +22,51 @@ namespace Simple.Data.Commands
             if (binder.HasSingleUnnamedArgument() || args.Length == 2 && args[1] is ErrorCallback)
             {
                 result = UpsertByKeyFields(table.GetQualifiedName(), dataStrategy, args[0],
-                                         MethodNameParser.ParseCriteriaNamesFromMethodName(binder.Name),
-                                         !binder.IsResultDiscarded(),
-                                         args.Length == 2 ? (ErrorCallback)args[1] : ((item, exception) => false));
+                                           MethodNameParser.ParseCriteriaNamesFromMethodName(binder.Name),
+                                           !binder.IsResultDiscarded(),
+                                           args.Length == 2 ? (ErrorCallback) args[1] : ((item, exception) => false));
             }
             else
             {
-                var criteria = MethodNameParser.ParseFromBinder(binder, args);
-                var criteriaExpression = ExpressionHelper.CriteriaDictionaryToExpression(table.GetQualifiedName(),
-                                                                                         criteria);
-                var data = binder.NamedArgumentsToDictionary(args);
-                result = dataStrategy.Run.Upsert(table.GetQualifiedName(), data, criteriaExpression, !binder.IsResultDiscarded());
+                IDictionary<string, object> criteria = MethodNameParser.ParseFromBinder(binder, args);
+                SimpleExpression criteriaExpression =
+                    ExpressionHelper.CriteriaDictionaryToExpression(table.GetQualifiedName(),
+                                                                    criteria);
+                IDictionary<string, object> data = binder.NamedArgumentsToDictionary(args);
+                result = dataStrategy.Run.Upsert(table.GetQualifiedName(), data, criteriaExpression,
+                                                 !binder.IsResultDiscarded());
             }
 
             return ResultHelper.TypeResult(result, table, dataStrategy);
         }
 
-        internal static object UpsertByKeyFields(string tableName, DataStrategy dataStrategy, object entity, IEnumerable<string> keyFieldNames, bool isResultRequired, ErrorCallback errorCallback)
+        #endregion
+
+        internal static object UpsertByKeyFields(string tableName, DataStrategy dataStrategy, object entity,
+                                                 IEnumerable<string> keyFieldNames, bool isResultRequired,
+                                                 ErrorCallback errorCallback)
         {
-            var record = UpdateCommand.ObjectToDictionary(entity);
+            object record = UpdateCommand.ObjectToDictionary(entity);
             var list = record as IList<IDictionary<string, object>>;
-            if (list != null) return dataStrategy.Run.UpsertMany(tableName, list, keyFieldNames, isResultRequired, errorCallback);
+            if (list != null)
+                return dataStrategy.Run.UpsertMany(tableName, list, keyFieldNames, isResultRequired, errorCallback);
 
             var dict = record as IDictionary<string, object>;
-            var criteria = GetCriteria(keyFieldNames, dict);
-            var criteriaExpression = ExpressionHelper.CriteriaDictionaryToExpression(tableName, criteria);
+            IEnumerable<KeyValuePair<string, object>> criteria = GetCriteria(keyFieldNames, dict);
+            SimpleExpression criteriaExpression = ExpressionHelper.CriteriaDictionaryToExpression(tableName, criteria);
             return dataStrategy.Run.Upsert(tableName, dict, criteriaExpression, isResultRequired);
         }
 
-        private static IEnumerable<KeyValuePair<string, object>> GetCriteria(IEnumerable<string> keyFieldNames, IDictionary<string, object> record)
+        private static IEnumerable<KeyValuePair<string, object>> GetCriteria(IEnumerable<string> keyFieldNames,
+                                                                             IDictionary<string, object> record)
         {
             var criteria = new Dictionary<string, object>();
 
-            foreach (var keyFieldName in keyFieldNames)
+            foreach (string keyFieldName in keyFieldNames)
             {
-                var name = keyFieldName;
-                var keyValuePair = record.SingleOrDefault(kvp => kvp.Key.Homogenize().Equals(name.Homogenize()));
+                string name = keyFieldName;
+                KeyValuePair<string, object> keyValuePair =
+                    record.SingleOrDefault(kvp => kvp.Key.Homogenize().Equals(name.Homogenize()));
                 if (string.IsNullOrWhiteSpace(keyValuePair.Key))
                 {
                     throw new InvalidOperationException("Key field value not set.");

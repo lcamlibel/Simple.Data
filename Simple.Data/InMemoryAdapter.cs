@@ -1,21 +1,21 @@
-﻿namespace Simple.Data
-{
-    using System;
-    using System.Collections.Generic;
-    using System.Collections.ObjectModel;
-    using System.Linq;
-    using QueryPolyfills;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using Simple.Data.QueryPolyfills;
 
+namespace Simple.Data
+{
     public partial class InMemoryAdapter : Adapter, IAdapterWithFunctions
     {
         private readonly Dictionary<string, string> _autoIncrementColumns;
-        private readonly Dictionary<string, string[]> _keyColumns;
 
-        private readonly Dictionary<string, List<IDictionary<string, object>>> _tables;
-
-        private readonly Dictionary<string, Delegate> _functions = new Dictionary<string, Delegate>(); 
+        private readonly Dictionary<string, Delegate> _functions = new Dictionary<string, Delegate>();
 
         private readonly ICollection<JoinInfo> _joins = new Collection<JoinInfo>();
+        private readonly Dictionary<string, string[]> _keyColumns;
+        private readonly IEqualityComparer<string> _nameComparer = EqualityComparer<string>.Default;
+        private readonly Dictionary<string, List<IDictionary<string, object>>> _tables;
 
         public InMemoryAdapter() : this(StringComparer.OrdinalIgnoreCase)
         {
@@ -28,6 +28,87 @@
             _autoIncrementColumns = new Dictionary<string, string>(_nameComparer);
             _tables = new Dictionary<string, List<IDictionary<string, object>>>(nameComparer);
         }
+
+        public JoinConfig Join
+        {
+            get { return new JoinConfig(_joins); }
+        }
+
+        #region IAdapterWithFunctions Members
+
+        public bool IsValidFunction(string functionName)
+        {
+            return _functions.ContainsKey(functionName);
+        }
+
+        public IEnumerable<IEnumerable<IEnumerable<KeyValuePair<string, object>>>> Execute(string functionName,
+                                                                                           IDictionary<string, object>
+                                                                                               parameters)
+        {
+            if (!_functions.ContainsKey(functionName))
+                throw new InvalidOperationException("No function found with that name.");
+            object obj = _functions[functionName].DynamicInvoke(parameters.Values.ToArray());
+
+            var dict = obj as IDictionary<string, object>;
+            if (dict != null)
+                return new List<IEnumerable<IDictionary<string, object>>> {new List<IDictionary<string, object>> {dict}};
+
+            var list = obj as IEnumerable<IDictionary<string, object>>;
+            if (list != null) return new List<IEnumerable<IDictionary<string, object>>> {list};
+
+            return obj as IEnumerable<IEnumerable<IDictionary<string, object>>>;
+        }
+
+        public IEnumerable<IEnumerable<IEnumerable<KeyValuePair<string, object>>>> Execute(string functionName,
+                                                                                           IDictionary<string, object>
+                                                                                               parameters,
+                                                                                           IAdapterTransaction
+                                                                                               transaction)
+        {
+            return Execute(functionName, parameters);
+        }
+
+        #endregion
+
+        #region IAdapterWithTransactions Members
+
+        public override IDictionary<string, object> Upsert(string tableName, IDictionary<string, object> dict,
+                                                           SimpleExpression criteriaExpression, bool isResultRequired,
+                                                           IAdapterTransaction adapterTransaction)
+        {
+            return Upsert(tableName, dict, criteriaExpression, isResultRequired);
+        }
+
+        public override IEnumerable<IDictionary<string, object>> UpsertMany(string tableName,
+                                                                            IList<IDictionary<string, object>> list,
+                                                                            IEnumerable<string> keyFieldNames,
+                                                                            IAdapterTransaction adapterTransaction,
+                                                                            bool isResultRequired,
+                                                                            Func
+                                                                                <IDictionary<string, object>, Exception,
+                                                                                bool> errorCallback)
+        {
+            return UpsertMany(tableName, list, keyFieldNames, isResultRequired, errorCallback);
+        }
+
+        public override IEnumerable<IDictionary<string, object>> UpsertMany(string tableName,
+                                                                            IList<IDictionary<string, object>> list,
+                                                                            IAdapterTransaction adapterTransaction,
+                                                                            bool isResultRequired,
+                                                                            Func
+                                                                                <IDictionary<string, object>, Exception,
+                                                                                bool> errorCallback)
+        {
+            return UpsertMany(tableName, list, isResultRequired, errorCallback);
+        }
+
+        public IDictionary<string, object> Get(string tableName, IAdapterTransaction transaction,
+                                               params object[] parameterValues)
+        {
+            return Get(tableName, parameterValues);
+        }
+
+        #endregion
 
         private List<IDictionary<string, object>> GetTable(string tableName)
         {
@@ -50,10 +131,11 @@
 
         public override IDictionary<string, object> Get(string tableName, params object[] keyValues)
         {
-            if (!_keyColumns.ContainsKey(tableName)) throw new InvalidOperationException("No key specified for In-Memory table.");
-            var keys = _keyColumns[tableName];
+            if (!_keyColumns.ContainsKey(tableName))
+                throw new InvalidOperationException("No key specified for In-Memory table.");
+            string[] keys = _keyColumns[tableName];
             if (keys.Length != keyValues.Length) throw new ArgumentException("Incorrect number of values for key.");
-            var expression = new ObjectReference(keys[0]) == keyValues[0];
+            SimpleExpression expression = new ObjectReference(keys[0]) == keyValues[0];
             for (int i = 1; i < keyValues.Length; i++)
             {
                 expression = expression && new ObjectReference(keys[i]) == keyValues[i];
@@ -76,25 +158,26 @@
             return GetTable(query.TableName);
         }
 
-        public override IDictionary<string, object> Insert(string tableName, IDictionary<string, object> data, bool resultRequired)
+        public override IDictionary<string, object> Insert(string tableName, IDictionary<string, object> data,
+                                                           bool resultRequired)
         {
             data = new Dictionary<string, object>(data, _nameComparer);
             if (_autoIncrementColumns.ContainsKey(tableName))
             {
-                var table = GetTable(tableName);
-                var autoIncrementColumn = _autoIncrementColumns[tableName];
+                List<IDictionary<string, object>> table = GetTable(tableName);
+                string autoIncrementColumn = _autoIncrementColumns[tableName];
 
-                if(!data.ContainsKey(autoIncrementColumn))
+                if (!data.ContainsKey(autoIncrementColumn))
                 {
                     data.Add(autoIncrementColumn, 0);
                 }
 
                 object nextVal = 0;
-                if(table.Count > 0)
+                if (table.Count > 0)
                 {
                     nextVal = table.Select(d => d[autoIncrementColumn]).Max();
                 }
-                
+
                 nextVal = ObjectMaths.Increment(nextVal);
                 data[autoIncrementColumn] = nextVal;
             }
@@ -109,9 +192,12 @@
 
         private void AddAsDetail(string tableName, IDictionary<string, object> data)
         {
-            foreach (var @join in _joins.Where(j => j.DetailTableName.Equals(tableName, StringComparison.OrdinalIgnoreCase)))
+            foreach (
+                JoinInfo joinInfo in
+                    _joins.Where(j => j.DetailTableName.Equals(tableName, StringComparison.OrdinalIgnoreCase)))
             {
-                if (!data.ContainsKey(@join.DetailKey)) continue;
+                if (!data.ContainsKey(joinInfo.DetailKey)) continue;
+                JoinInfo @join = joinInfo;
                 foreach (
                     var master in
                         GetTable(@join.MasterTableName).Where(
@@ -132,22 +218,25 @@
 
         private void AddAsMaster(string tableName, IDictionary<string, object> data)
         {
-            foreach (var @join in _joins.Where(j => j.MasterTableName.Equals(tableName, StringComparison.OrdinalIgnoreCase)))
+            foreach (
+                JoinInfo joinInfo in
+                    _joins.Where(j => j.MasterTableName.Equals(tableName, StringComparison.OrdinalIgnoreCase)))
             {
-                if (!data.ContainsKey(@join.MasterKey)) continue;
+                if (!data.ContainsKey(joinInfo.MasterKey)) continue;
+                JoinInfo info = joinInfo;
                 foreach (
                     var detail in
-                        GetTable(@join.DetailTableName).Where(
-                            d => d.ContainsKey(@join.DetailKey) && d[@join.DetailKey].Equals(data[@join.MasterKey])))
+                        GetTable(joinInfo.DetailTableName).Where(
+                            d => d.ContainsKey(info.DetailKey) && d[info.DetailKey].Equals(data[info.MasterKey])))
                 {
-                    detail[@join.MasterPropertyName] = data;
-                    if (!data.ContainsKey(@join.DetailPropertyName))
+                    detail[joinInfo.MasterPropertyName] = data;
+                    if (!data.ContainsKey(joinInfo.DetailPropertyName))
                     {
-                        data.Add(@join.DetailPropertyName, new List<IDictionary<string, object>> {data});
+                        data.Add(joinInfo.DetailPropertyName, new List<IDictionary<string, object>> {data});
                     }
                     else
                     {
-                        ((List<IDictionary<string, object>>) data[@join.DetailPropertyName]).Add(data);
+                        ((List<IDictionary<string, object>>) data[joinInfo.DetailPropertyName]).Add(data);
                     }
                 }
             }
@@ -164,7 +253,8 @@
             return count;
         }
 
-        private static void UpdateRecord(IEnumerable<KeyValuePair<string, object>> data, IDictionary<string, object> record)
+        private static void UpdateRecord(IEnumerable<KeyValuePair<string, object>> data,
+                                         IDictionary<string, object> record)
         {
             foreach (var kvp in data)
             {
@@ -220,30 +310,94 @@
         /// <param name="detailTableName">The name of the 'master' table</param>
         /// <param name="detailKey">The 'foreign key'</param>
         /// <param name="detailPropertyName">The name to give the collection property in the master object</param>
-        public void ConfigureJoin(string masterTableName, string masterKey, string masterPropertyName, string detailTableName, string detailKey, string detailPropertyName)
+        public void ConfigureJoin(string masterTableName, string masterKey, string masterPropertyName,
+                                  string detailTableName, string detailKey, string detailPropertyName)
         {
             var join = new JoinInfo(masterTableName, masterKey, masterPropertyName, detailTableName, detailKey,
-                                detailPropertyName);
+                                    detailPropertyName);
             _joins.Add(join);
         }
 
-        public JoinConfig Join
+        public void AddFunction<TResult>(string functionName, Func<TResult> function)
         {
-            get { return new JoinConfig(_joins);}
+            _functions.Add(functionName, function);
         }
 
-        private IEqualityComparer<string> _nameComparer = EqualityComparer<string>.Default;
+        public void AddFunction<T, TResult>(string functionName, Func<T, TResult> function)
+        {
+            _functions.Add(functionName, function);
+        }
+
+        public void AddFunction<T1, T2, TResult>(string functionName, Func<T1, T2, TResult> function)
+        {
+            _functions.Add(functionName, function);
+        }
+
+        public void AddFunction<T1, T2, T3, TResult>(string functionName, Func<T1, T2, T3, TResult> function)
+        {
+            _functions.Add(functionName, function);
+        }
+
+        public void AddFunction<T1, T2, T3, T4, TResult>(string functionName, Func<T1, T2, T3, T4, TResult> function)
+        {
+            _functions.Add(functionName, function);
+        }
+
+        public void AddDelegate(string functionName, Delegate function)
+        {
+            _functions.Add(functionName, function);
+        }
+
+        #region Nested type: JoinConfig
+
+        public class JoinConfig
+        {
+            private readonly ICollection<JoinInfo> _joins;
+            private JoinInfo _joinInfo;
+
+            internal JoinConfig(ICollection<JoinInfo> joins)
+            {
+                _joins = joins;
+                _joinInfo = new JoinInfo(null, null, null, null, null, null);
+            }
+
+            public JoinConfig Master(string tableName, string keyName, string propertyNameInDetailRecords = null)
+            {
+                if (_joins.Contains(_joinInfo)) _joins.Remove(_joinInfo);
+                _joinInfo = new JoinInfo(tableName, keyName, propertyNameInDetailRecords ?? tableName,
+                                         _joinInfo.DetailTableName,
+                                         _joinInfo.DetailKey, _joinInfo.DetailPropertyName);
+                _joins.Add(_joinInfo);
+                return this;
+            }
+
+
+            public JoinConfig Detail(string tableName, string keyName, string propertyNameInMasterRecords = null)
+            {
+                if (_joins.Contains(_joinInfo)) _joins.Remove(_joinInfo);
+                _joinInfo = new JoinInfo(_joinInfo.MasterTableName, _joinInfo.MasterKey, _joinInfo.MasterPropertyName,
+                                         tableName, keyName,
+                                         propertyNameInMasterRecords ?? tableName);
+                _joins.Add(_joinInfo);
+                return this;
+            }
+        }
+
+        #endregion
+
+        #region Nested type: JoinInfo
 
         internal class JoinInfo
         {
-            private readonly string _masterTableName;
-            private readonly string _masterKey;
-            private readonly string _masterPropertyName;
-            private readonly string _detailTableName;
             private readonly string _detailKey;
             private readonly string _detailPropertyName;
+            private readonly string _detailTableName;
+            private readonly string _masterKey;
+            private readonly string _masterPropertyName;
+            private readonly string _masterTableName;
 
-            public JoinInfo(string masterTableName, string masterKey, string masterPropertyName, string detailTableName, string detailKey, string detailPropertyName)
+            public JoinInfo(string masterTableName, string masterKey, string masterPropertyName, string detailTableName,
+                            string detailKey, string detailPropertyName)
             {
                 _masterTableName = masterTableName;
                 _masterKey = masterKey;
@@ -284,110 +438,6 @@
             }
         }
 
-        public override IDictionary<string, object> Upsert(string tableName, IDictionary<string, object> dict, SimpleExpression criteriaExpression, bool isResultRequired, IAdapterTransaction adapterTransaction)
-        {
-            return Upsert(tableName, dict, criteriaExpression, isResultRequired);
-        }
-
-        public override IEnumerable<IDictionary<string, object>> UpsertMany(string tableName, IList<IDictionary<string, object>> list, IEnumerable<string> keyFieldNames, IAdapterTransaction adapterTransaction, bool isResultRequired, Func<IDictionary<string,object>,Exception,bool> errorCallback)
-        {
-            return UpsertMany(tableName, list, keyFieldNames, isResultRequired, errorCallback);
-        }
-
-        public override IEnumerable<IDictionary<string, object>> UpsertMany(string tableName, IList<IDictionary<string, object>> list, IAdapterTransaction adapterTransaction, bool isResultRequired, Func<IDictionary<string, object>, Exception, bool> errorCallback)
-        {
-            return UpsertMany(tableName, list, isResultRequired, errorCallback);
-        }
-
-        public IDictionary<string, object> Get(string tableName, IAdapterTransaction transaction, params object[] parameterValues)
-        {
-            return Get(tableName, parameterValues);
-        }
-
-        public class JoinConfig
-        {
-            private readonly ICollection<JoinInfo> _joins;
-            private JoinInfo _joinInfo;
-
-            internal JoinConfig(ICollection<JoinInfo> joins)
-            {
-                _joins = joins;
-                _joinInfo = new JoinInfo(null,null,null,null,null,null);
-            }
-
-            public JoinConfig Master(string tableName, string keyName, string propertyNameInDetailRecords = null)
-            {
-                if (_joins.Contains(_joinInfo)) _joins.Remove(_joinInfo);
-                _joinInfo = new JoinInfo(tableName, keyName, propertyNameInDetailRecords ?? tableName, _joinInfo.DetailTableName,
-                                 _joinInfo.DetailKey, _joinInfo.DetailPropertyName);
-                _joins.Add(_joinInfo);
-                return this;
-            }
-
-
-            public JoinConfig Detail(string tableName, string keyName, string propertyNameInMasterRecords = null)
-            {
-                if (_joins.Contains(_joinInfo)) _joins.Remove(_joinInfo);
-                _joinInfo = new JoinInfo(_joinInfo.MasterTableName, _joinInfo.MasterKey, _joinInfo.MasterPropertyName,
-                                         tableName, keyName,
-                                         propertyNameInMasterRecords ?? tableName);
-                _joins.Add(_joinInfo);
-                return this;
-            }
-        }
-
-        public void AddFunction<TResult>(string functionName, Func<TResult> function)
-        {
-            _functions.Add(functionName, function);
-        }
-
-        public void AddFunction<T,TResult>(string functionName, Func<T,TResult> function)
-        {
-            _functions.Add(functionName, function);
-        }
-
-        public void AddFunction<T1,T2,TResult>(string functionName, Func<T1,T2,TResult> function)
-        {
-            _functions.Add(functionName, function);
-        }
-
-        public void AddFunction<T1,T2,T3,TResult>(string functionName, Func<T1,T2,T3,TResult> function)
-        {
-            _functions.Add(functionName, function);
-        }
-
-        public void AddFunction<T1, T2, T3, T4, TResult>(string functionName, Func<T1, T2, T3, T4, TResult> function)
-        {
-            _functions.Add(functionName, function);
-        }
-
-        public void AddDelegate(string functionName, Delegate function)
-        {
-            _functions.Add(functionName, function);
-        }
-
-        public bool IsValidFunction(string functionName)
-        {
-            return _functions.ContainsKey(functionName);
-        }
-
-        public IEnumerable<IEnumerable<IEnumerable<KeyValuePair<string, object>>>> Execute(string functionName, IDictionary<string, object> parameters)
-        {
-            if (!_functions.ContainsKey(functionName)) throw new InvalidOperationException("No function found with that name.");
-            var obj = _functions[functionName].DynamicInvoke(parameters.Values.ToArray());
-
-            var dict = obj as IDictionary<string, object>;
-            if (dict != null) return new List<IEnumerable<IDictionary<string, object>>> { new List<IDictionary<string, object>> { dict } };
-
-            var list = obj as IEnumerable<IDictionary<string, object>>;
-            if (list != null) return new List<IEnumerable<IDictionary<string, object>>> { list };
-
-            return obj as IEnumerable<IEnumerable<IDictionary<string, object>>>;
-        }
-
-        public IEnumerable<IEnumerable<IEnumerable<KeyValuePair<string, object>>>> Execute(string functionName, IDictionary<string, object> parameters, IAdapterTransaction transaction)
-        {
-            return Execute(functionName, parameters);
-        }
+        #endregion
     }
 }

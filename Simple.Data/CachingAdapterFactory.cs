@@ -2,23 +2,20 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Simple.Data
 {
-    class CachingAdapterFactory : AdapterFactory
+    internal class CachingAdapterFactory : AdapterFactory
     {
+        private readonly ConcurrentDictionary<string, Adapter> _cache = new ConcurrentDictionary<string, Adapter>();
+
         public CachingAdapterFactory()
         {
-            
         }
 
         public CachingAdapterFactory(Composer composer) : base(composer)
         {
-            
         }
-
-        private readonly ConcurrentDictionary<string, Adapter> _cache = new ConcurrentDictionary<string, Adapter>();
 
         public override Adapter Create(string adapterName, IEnumerable<KeyValuePair<string, object>> settings)
         {
@@ -34,17 +31,17 @@ namespace Simple.Data
                 mat = settings.ToList();
                 hash = HashSettings(adapterName, mat);
             }
-            
-            var adapter = _cache.GetOrAdd(hash, _ => DoCreate(adapterName, mat));
+
+            Adapter adapter = _cache.GetOrAdd(hash, _ => DoCreate(adapterName, mat));
             var cloneable = adapter as ICloneable;
-            if (cloneable != null) return (Adapter)cloneable.Clone();
+            if (cloneable != null) return (Adapter) cloneable.Clone();
             return adapter;
         }
 
         private static string HashSettings(string adapterName, IEnumerable<KeyValuePair<string, object>> settings)
         {
             return adapterName +
-                       string.Join("#", settings.Select(kvp => kvp.Key + "=" + kvp.Value));
+                   string.Join("#", settings.Select(kvp => kvp.Key + "=" + kvp.Value));
         }
 
         public void Reset()

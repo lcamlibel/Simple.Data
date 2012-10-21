@@ -4,7 +4,6 @@ namespace Simple.Data.Ado
 {
     public class QueryBuilder : QueryBuilderBase
     {
-
         private List<SimpleQueryClauseBase> _unhandledClauses;
 
         public QueryBuilder(AdoAdapter adoAdapter)
@@ -18,11 +17,11 @@ namespace Simple.Data.Ado
 
         public override ICommandBuilder Build(SimpleQuery query, out IEnumerable<SimpleQueryClauseBase> unhandledClauses)
         {
-
-            var customBuilder = _adoAdapter.ProviderHelper.GetCustomProvider<ICustomQueryBuilder>(_adoAdapter.ConnectionProvider);
+            var customBuilder =
+                AdoAdapter.ProviderHelper.GetCustomProvider<ICustomQueryBuilder>(AdoAdapter.ConnectionProvider);
             if (customBuilder != null)
             {
-                return customBuilder.Build(_adoAdapter, _bulkIndex, query, out unhandledClauses);
+                return customBuilder.Build(AdoAdapter, BulkIndex, query, out unhandledClauses);
             }
 
             _unhandledClauses = new List<SimpleQueryClauseBase>();
@@ -35,8 +34,7 @@ namespace Simple.Data.Ado
             HandleOrderBy();
 
             unhandledClauses = _unhandledClauses;
-            return _commandBuilder;
+            return CommandBuilder;
         }
-
     }
 }

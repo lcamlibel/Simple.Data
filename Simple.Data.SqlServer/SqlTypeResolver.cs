@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Simple.Data.SqlServer
 {
-    static class SqlTypeResolver
+    internal static class SqlTypeResolver
     {
         private static readonly Dictionary<string, Type> ClrTypes = new Dictionary<string, Type>
                                                                         {
@@ -41,7 +38,6 @@ namespace Simple.Data.SqlServer
                                                                             {"nchar", typeof (string)},
                                                                             {"xml", typeof (string)},
                                                                             {"sysname", typeof (string)},
-
                                                                         };
 
         public static Type GetClrType(string sqlTypeName)

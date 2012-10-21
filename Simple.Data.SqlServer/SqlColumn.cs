@@ -1,8 +1,8 @@
-﻿namespace Simple.Data.SqlServer
-{
-    using System.Data;
-    using Ado.Schema;
+﻿using System.Data;
+using Simple.Data.Ado.Schema;
 
+namespace Simple.Data.SqlServer
+{
     public class SqlColumn : Column
     {
         private readonly SqlDbType _sqlDbType;

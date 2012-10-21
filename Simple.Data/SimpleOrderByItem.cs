@@ -2,8 +2,8 @@
 {
     public class SimpleOrderByItem
     {
-        private readonly ObjectReference _reference;
         private readonly OrderByDirection _direction;
+        private readonly ObjectReference _reference;
 
         public SimpleOrderByItem(ObjectReference reference) : this(reference, OrderByDirection.Ascending)
         {

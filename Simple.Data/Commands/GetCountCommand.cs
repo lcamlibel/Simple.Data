@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Dynamic;
-using System.Linq;
-using System.Text;
 
 namespace Simple.Data.Commands
 {
-    class GetCountCommand : ICommand
+    internal class GetCountCommand : ICommand
     {
+        #region ICommand Members
+
         /// <summary>
         /// Determines whether the instance is able to handle the specified method.
         /// </summary>
@@ -17,7 +16,8 @@ namespace Simple.Data.Commands
         /// </returns>
         public bool IsCommandFor(string method)
         {
-            return method.Equals("getcount", StringComparison.InvariantCultureIgnoreCase) || method.Equals("get_count", StringComparison.InvariantCultureIgnoreCase);
+            return method.Equals("getcount", StringComparison.InvariantCultureIgnoreCase) ||
+                   method.Equals("get_count", StringComparison.InvariantCultureIgnoreCase);
         }
 
         /// <summary>
@@ -34,10 +34,12 @@ namespace Simple.Data.Commands
 
             if (args.Length == 1 && args[0] is SimpleExpression)
             {
-                query = query.Where((SimpleExpression)args[0]);
+                query = query.Where((SimpleExpression) args[0]);
             }
 
             return query.Count();
         }
+
+        #endregion
     }
 }

@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using Simple.Data.Extensions;
 
 namespace Simple.Data.QueryPolyfills
 {
-    using Extensions;
-
-    class GroupingHandler
+    internal class GroupingHandler
     {
         private readonly HashSet<string> _groupColumns;
 
@@ -16,7 +13,8 @@ namespace Simple.Data.QueryPolyfills
             _groupColumns = new HashSet<string>(groupColumns);
         }
 
-        public IEnumerable<IGrouping<IDictionary<string, object>, IDictionary<string, object>>> Group(IEnumerable<IDictionary<string,object>> source)
+        public IEnumerable<IGrouping<IDictionary<string, object>, IDictionary<string, object>>> Group(
+            IEnumerable<IDictionary<string, object>> source)
         {
             return source.GroupBy(d => d.Where(kvp => _groupColumns.Contains(kvp.Key)).ToDictionary(),
                                   d => d.Where(kvp => !_groupColumns.Contains(kvp.Key)).ToDictionary(),

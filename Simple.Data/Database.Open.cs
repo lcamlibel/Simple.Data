@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Simple.Data
+﻿namespace Simple.Data
 {
     public partial class Database
     {
@@ -35,7 +33,7 @@ namespace Simple.Data
         {
             return DatabaseOpener.OpenFile(filename);
         }
-        
+
         public static dynamic OpenNamedConnection(string connectionName)
         {
             return DatabaseOpener.OpenNamedConnection(connectionName);

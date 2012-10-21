@@ -1,11 +1,13 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace Simple.Data.QueryPolyfills
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-
     public class DictionaryEqualityComparer : IEqualityComparer<IDictionary<string, object>>
     {
+        #region IEqualityComparer<IDictionary<string,object>> Members
+
         public bool Equals(IDictionary<string, object> x, IDictionary<string, object> y)
         {
             if (ReferenceEquals(x, y)) return true;
@@ -18,8 +20,11 @@ namespace Simple.Data.QueryPolyfills
         public int GetHashCode(IDictionary<string, object> obj)
         {
             return obj.Aggregate(0,
-                                 (acc, kvp) => (((acc * 397) ^ kvp.Key.GetHashCode()) * 397) ^ (kvp.Value ?? DBNull.Value).GetHashCode());
+                                 (acc, kvp) =>
+                                 (((acc*397) ^ kvp.Key.GetHashCode())*397) ^ (kvp.Value ?? DBNull.Value).GetHashCode());
         }
+
+        #endregion
 
         public override int GetHashCode()
         {

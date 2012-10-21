@@ -7,6 +7,8 @@ namespace Simple.Data
     {
         public static readonly HomogenizedEqualityComparer DefaultInstance = new HomogenizedEqualityComparer();
 
+        #region IEqualityComparer<string> Members
+
         public bool Equals(string x, string y)
         {
             return ReferenceEquals(x, y.Homogenize())
@@ -17,5 +19,7 @@ namespace Simple.Data
         {
             return obj.Homogenize().GetHashCode();
         }
+
+        #endregion
     }
 }

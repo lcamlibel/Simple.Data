@@ -4,8 +4,10 @@ using Simple.Data.Extensions;
 
 namespace Simple.Data.Commands
 {
-    class DeleteAllCommand : ICommand
+    internal class DeleteAllCommand : ICommand
     {
+        #region ICommand Members
+
         public bool IsCommandFor(string method)
         {
             return method.Equals("deleteall", StringComparison.InvariantCultureIgnoreCase);
@@ -13,7 +15,7 @@ namespace Simple.Data.Commands
 
         public object Execute(DataStrategy dataStrategy, DynamicTable table, InvokeMemberBinder binder, object[] args)
         {
-            var deletedCount = 0;
+            int deletedCount = 0;
 
             if (args.Length == 0)
             {
@@ -22,10 +24,12 @@ namespace Simple.Data.Commands
 
             if (args.Length == 1 && args[0] is SimpleExpression)
             {
-                deletedCount = dataStrategy.Run.Delete(table.GetQualifiedName(), (SimpleExpression)args[0]);
+                deletedCount = dataStrategy.Run.Delete(table.GetQualifiedName(), (SimpleExpression) args[0]);
             }
 
             return deletedCount.ResultSetFromModifiedRowCount();
         }
+
+        #endregion
     }
 }

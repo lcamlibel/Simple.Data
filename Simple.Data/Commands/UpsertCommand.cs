@@ -1,14 +1,16 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Dynamic;
+using System.Linq;
+using Simple.Data.Extensions;
+
 namespace Simple.Data.Commands
 {
-    using System;
-    using System.Collections;
-    using System.Collections.Generic;
-    using System.Dynamic;
-    using System.Linq;
-    using Extensions;
-
     internal class UpsertCommand : ICommand
     {
+        #region ICommand Members
+
         public bool IsCommandFor(string method)
         {
             return method.Equals("upsert", StringComparison.InvariantCultureIgnoreCase);
@@ -17,7 +19,8 @@ namespace Simple.Data.Commands
         public object Execute(DataStrategy dataStrategy, DynamicTable table, InvokeMemberBinder binder, object[] args)
         {
             object[] objects;
-            if (binder.CallInfo.ArgumentNames.Count > 0 && binder.CallInfo.ArgumentNames.All(s => !string.IsNullOrWhiteSpace(s)))
+            if (binder.CallInfo.ArgumentNames.Count > 0 &&
+                binder.CallInfo.ArgumentNames.All(s => !string.IsNullOrWhiteSpace(s)))
             {
                 objects = new object[] {binder.NamedArgumentsToDictionary(args)};
             }
@@ -30,27 +33,32 @@ namespace Simple.Data.Commands
                 objects = args;
             }
 
-            var result = UpsertUsingKeys(dataStrategy, table, objects, !binder.IsResultDiscarded());
+            object result = UpsertUsingKeys(dataStrategy, table, objects, !binder.IsResultDiscarded());
 
             return ResultHelper.TypeResult(result, table, dataStrategy);
         }
 
-        private static object UpsertUsingKeys(DataStrategy dataStrategy, DynamicTable table, object[] args, bool isResultRequired)
+        #endregion
+
+        private static object UpsertUsingKeys(DataStrategy dataStrategy, DynamicTable table, object[] args,
+                                              bool isResultRequired)
         {
-            var record = ObjectToDictionary(args[0]);
+            object record = ObjectToDictionary(args[0]);
             var list = record as IList<IDictionary<string, object>>;
             if (list != null)
             {
                 ErrorCallback errorCallback = (args.Length == 2 ? args[1] as ErrorCallback : null) ??
-                 ((item, exception) => false);
+                                              ((item, exception) => false);
                 return dataStrategy.Run.UpsertMany(table.GetQualifiedName(), list, isResultRequired, errorCallback);
             }
 
             var dict = record as IDictionary<string, object>;
             if (dict == null) throw new InvalidOperationException("Could not resolve data from passed object.");
-            var key = dataStrategy.GetAdapter().GetKey(table.GetQualifiedName(), dict);
-            if (key == null) throw new InvalidOperationException(string.Format("No key columns defined for table \"{0}\"",table.GetQualifiedName()));
-            var criteria = ExpressionHelper.CriteriaDictionaryToExpression(table.GetQualifiedName(), key);
+            IDictionary<string, object> key = dataStrategy.GetAdapter().GetKey(table.GetQualifiedName(), dict);
+            if (key == null)
+                throw new InvalidOperationException(string.Format("No key columns defined for table \"{0}\"",
+                                                                  table.GetQualifiedName()));
+            SimpleExpression criteria = ExpressionHelper.CriteriaDictionaryToExpression(table.GetQualifiedName(), key);
             return dataStrategy.Run.Upsert(table.GetQualifiedName(), dict, criteria, isResultRequired);
         }
 
@@ -71,8 +79,10 @@ namespace Simple.Data.Commands
             var list = obj as IEnumerable;
             if (list != null)
             {
-                var originals = list.Cast<object>().ToList();
-                var dictionaries = originals.Select(o => ObjectToDictionary(o) as IDictionary<string,object>).Where(o => o != null && o.Count > 0).ToList();
+                List<object> originals = list.Cast<object>().ToList();
+                List<IDictionary<string, object>> dictionaries =
+                    originals.Select(o => ObjectToDictionary(o) as IDictionary<string, object>).Where(
+                        o => o != null && o.Count > 0).ToList();
                 if (originals.Count == dictionaries.Count)
                     return dictionaries;
             }

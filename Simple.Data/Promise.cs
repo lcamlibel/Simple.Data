@@ -5,12 +5,11 @@ namespace Simple.Data
 {
     public class Promise<T>
     {
-        private T _value;
         private bool _hasValue;
+        private T _value;
 
         private Promise()
         {
-
         }
 
         public T Value

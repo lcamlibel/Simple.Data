@@ -5,7 +5,6 @@
         public ExistsSpecialReference()
             : base("EXISTS")
         {
-
         }
     }
 }

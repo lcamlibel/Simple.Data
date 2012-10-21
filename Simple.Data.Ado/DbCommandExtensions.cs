@@ -1,44 +1,53 @@
-﻿namespace Simple.Data.Ado
-{
-    using System;
-    using System.Collections;
-    using System.Collections.Generic;
-    using System.Data;
-    using System.Data.Common;
-    using System.Dynamic;
-    using System.Linq;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.Common;
+using System.Dynamic;
+using System.Linq;
 
+namespace Simple.Data.Ado
+{
     public static class DbCommandExtensions
     {
-        public static IEnumerable<IDictionary<string, object>> ToEnumerable(this IDbCommand command, Func<IDbConnection> createConnection)
+        public static IEnumerable<IDictionary<string, object>> ToEnumerable(this IDbCommand command,
+                                                                            Func<IDbConnection> createConnection)
         {
             return ToEnumerable(command, createConnection, null);
         }
 
-        public static IEnumerable<IEnumerable<IDictionary<string, object>>> ToEnumerables(this IDbCommand command, IDbConnection connection)
+        public static IEnumerable<IEnumerable<IDictionary<string, object>>> ToEnumerables(this IDbCommand command,
+                                                                                          IDbConnection connection)
         {
             return new DataReaderMultipleEnumerator(command, connection).Wrap();
         }
 
-        public static IEnumerable<IDictionary<string, object>> ToEnumerable(this IDbCommand command, Func<IDbConnection> createConnection, IDictionary<string, int> index)
+        public static IEnumerable<IDictionary<string, object>> ToEnumerable(this IDbCommand command,
+                                                                            Func<IDbConnection> createConnection,
+                                                                            IDictionary<string, int> index)
         {
             return new DataReaderEnumerable(command, createConnection, index);
         }
 
-        public static IObservable<IDictionary<string, object>> ToObservable(this IDbCommand command, IDbConnection connection, AdoAdapter adapter)
+        public static IObservable<IDictionary<string, object>> ToObservable(this IDbCommand command,
+                                                                            IDbConnection connection, AdoAdapter adapter)
         {
             return ToObservable(command, connection, adapter, null);
         }
 
-        public static IObservable<IDictionary<string, object>> ToObservable(this IDbCommand command, IDbConnection connection, AdoAdapter adapter, IDictionary<string, int> index)
+        public static IObservable<IDictionary<string, object>> ToObservable(this IDbCommand command,
+                                                                            IDbConnection connection, AdoAdapter adapter,
+                                                                            IDictionary<string, int> index)
         {
-            var runner = adapter.ProviderHelper.GetCustomProvider<IObservableQueryRunner>(adapter.ConnectionProvider) ?? new ObservableQueryRunner();
+            IObservableQueryRunner runner =
+                adapter.ProviderHelper.GetCustomProvider<IObservableQueryRunner>(adapter.ConnectionProvider) ??
+                new ObservableQueryRunner();
             return runner.Run(command, connection, index);
         }
 
         public static IDbDataParameter AddParameter(this IDbCommand command, string name, object value)
         {
-            var parameter = command.CreateParameter();
+            IDbDataParameter parameter = command.CreateParameter();
             parameter.ParameterName = name;
             parameter.Value = FixObjectType(value);
             command.Parameters.Add(parameter);
@@ -95,13 +104,15 @@
             using (connection)
             using (command)
             using (reader)
-            { /* NoOp */ }
+            {
+                /* NoOp */
+            }
         }
 
         public static void SetParameterValues(this IDbCommand command, IList<object> values)
         {
             int index = 0;
-            foreach (var parameter in command.Parameters.Cast<IDbDataParameter>())
+            foreach (IDbDataParameter parameter in command.Parameters.Cast<IDbDataParameter>())
             {
                 parameter.Value = CommandHelper.FixObjectType(values[index]);
                 index++;
@@ -110,7 +121,7 @@
 
         public static void ClearParameterValues(this IDbCommand command)
         {
-            foreach (var parameter in command.Parameters.Cast<IDbDataParameter>())
+            foreach (IDbDataParameter parameter in command.Parameters.Cast<IDbDataParameter>())
             {
                 parameter.Value = DBNull.Value;
             }
@@ -121,24 +132,30 @@
             ((IDbDataParameter) command.Parameters[index]).Value = CommandHelper.FixObjectType(value);
         }
 
-        public static IEnumerable<IDictionary<string, object>> ToEnumerable(this IDbCommand command, IDbTransaction transaction)
+        public static IEnumerable<IDictionary<string, object>> ToEnumerable(this IDbCommand command,
+                                                                            IDbTransaction transaction)
         {
             return ToEnumerable(command, transaction, null);
         }
 
-        public static IEnumerable<IDictionary<string, object>> ToEnumerable(this IDbCommand command, IDbTransaction transaction, IDictionary<string, int> index)
+        public static IEnumerable<IDictionary<string, object>> ToEnumerable(this IDbCommand command,
+                                                                            IDbTransaction transaction,
+                                                                            IDictionary<string, int> index)
         {
             return new DataReaderEnumerable(command, transaction, index);
         }
     }
 
-    class EnumerableShim<T> : IEnumerable<T>
+    internal class EnumerableShim<T> : IEnumerable<T>
     {
-        private readonly IEnumerator<T> _enumerator; 
+        private readonly IEnumerator<T> _enumerator;
+
         public EnumerableShim(IEnumerator<T> enumerator)
         {
             _enumerator = enumerator;
         }
+
+        #region IEnumerable<T> Members
 
         public IEnumerator<T> GetEnumerator()
         {
@@ -150,9 +167,10 @@
             return GetEnumerator();
         }
 
+        #endregion
     }
 
-    static class EnumerableShim
+    internal static class EnumerableShim
     {
         public static IEnumerable<T> Wrap<T>(this IEnumerator<T> enumerator)
         {

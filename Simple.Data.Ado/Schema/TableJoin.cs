@@ -1,11 +1,11 @@
 ﻿namespace Simple.Data.Ado.Schema
 {
-    class TableJoin
+    internal class TableJoin
     {
-        private readonly Table _master;
-        private readonly Column _masterColumn;
         private readonly Table _detail;
         private readonly Column _detailColumn;
+        private readonly Table _master;
+        private readonly Column _masterColumn;
 
         public TableJoin(Table master, Column masterColumn, Table detail, Column detailColumn)
         {
@@ -32,9 +32,7 @@
 
         public Column DetailColumn
         {
-            get {
-                return _detailColumn;
-            }
+            get { return _detailColumn; }
         }
     }
 }

@@ -3,9 +3,7 @@ using System.Linq;
 
 namespace Simple.Data.Ado
 {
-    using System;
-
-    class ExpressionHasher : ExpressionFormatterBase
+    internal class ExpressionHasher : ExpressionFormatterBase
     {
         public ExpressionHasher() : base(() => new Operators())
         {

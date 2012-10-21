@@ -1,16 +1,15 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace Simple.Data.QueryPolyfills
 {
-    using System;
-    using System.Collections.Concurrent;
-    using System.Collections.Generic;
-    using System.Linq;
-
-    class SelectClauseHandler
+    internal class SelectClauseHandler
     {
-        private readonly IList<SimpleReference> _references;
-        private readonly IList<ValueResolver> _resolvers; 
-        private Func<int, IDictionary<string, object>> _creator;
         private readonly GroupingHandler _groupingHandler;
+        private readonly IList<SimpleReference> _references;
+        private readonly IList<ValueResolver> _resolvers;
+        private Func<int, IDictionary<string, object>> _creator;
 
         public SelectClauseHandler(SelectClause clause)
         {
@@ -27,11 +26,12 @@ namespace Simple.Data.QueryPolyfills
             }
         }
 
-        public IEnumerable<IDictionary<string,object>> Run(IEnumerable<IDictionary<string,object>> source)
+        public IEnumerable<IDictionary<string, object>> Run(IEnumerable<IDictionary<string, object>> source)
         {
             if (_groupingHandler != null)
             {
-                var groupedSource = _groupingHandler.Group(source);
+                IEnumerable<IGrouping<IDictionary<string, object>, IDictionary<string, object>>> groupedSource =
+                    _groupingHandler.Group(source);
                 return groupedSource.Select(Run);
             }
 
@@ -54,10 +54,11 @@ namespace Simple.Data.QueryPolyfills
             return source.Select(Run);
         }
 
-        public IDictionary<string, object> Run(IGrouping<IDictionary<string, object>, IDictionary<string, object>> grouping)
+        public IDictionary<string, object> Run(
+            IGrouping<IDictionary<string, object>, IDictionary<string, object>> grouping)
         {
             if (_creator == null) _creator = DictionaryCreatorFactory.CreateFunc(grouping.Key);
-            var target = _creator(_references.Count);
+            IDictionary<string, object> target = _creator(_references.Count);
             for (int i = 0; i < _references.Count; i++)
             {
                 _resolvers[i].CopyValue(grouping.Key, target, grouping);
@@ -65,10 +66,10 @@ namespace Simple.Data.QueryPolyfills
             return target;
         }
 
-        private IDictionary<string,object> Run(IDictionary<string,object> source)
+        private IDictionary<string, object> Run(IDictionary<string, object> source)
         {
             if (_creator == null) _creator = DictionaryCreatorFactory.CreateFunc(source);
-            var target = _creator(_references.Count);
+            IDictionary<string, object> target = _creator(_references.Count);
             for (int i = 0; i < _references.Count; i++)
             {
                 _resolvers[i].CopyValue(source, target);
@@ -81,6 +82,5 @@ namespace Simple.Data.QueryPolyfills
             var functionReference = reference as FunctionReference;
             return ReferenceEquals(functionReference, null) || !FunctionHandlers.Exists(functionReference.Name);
         }
-        
     }
 }

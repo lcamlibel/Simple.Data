@@ -6,8 +6,8 @@ namespace Simple.Data
     /// </summary>
     public class OrderByClause : SimpleQueryClauseBase
     {
-        private readonly ObjectReference _reference;
         private readonly OrderByDirection _direction;
+        private readonly ObjectReference _reference;
 
         public OrderByClause(ObjectReference reference, OrderByDirection? direction = null)
         {
@@ -24,6 +24,5 @@ namespace Simple.Data
         {
             get { return _reference; }
         }
-
     }
 }

@@ -25,8 +25,6 @@ namespace Simple.Data
             SerializationInfo info,
             StreamingContext context) : base(info, context)
         {
-            
-            
         }
 
         public Type AdapterType

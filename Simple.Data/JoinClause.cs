@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Simple.Data
 {
@@ -11,15 +8,16 @@ namespace Simple.Data
     /// </summary>
     public class JoinClause : SimpleQueryClauseBase
     {
-        private readonly ObjectReference _table;
-        private readonly JoinType _joinType;
         private readonly SimpleExpression _joinExpression;
+        private readonly JoinType _joinType;
+        private readonly ObjectReference _table;
 
         public JoinClause(ObjectReference table, JoinType joinType) : this(table, joinType, null)
         {
         }
 
-        public JoinClause(ObjectReference table, SimpleExpression joinExpression) : this(table, JoinType.Inner, joinExpression)
+        public JoinClause(ObjectReference table, SimpleExpression joinExpression)
+            : this(table, JoinType.Inner, joinExpression)
         {
         }
 

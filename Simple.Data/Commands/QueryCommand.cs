@@ -1,28 +1,37 @@
+using System;
+using System.Dynamic;
+
 namespace Simple.Data.Commands
 {
-    using System;
-    using System.Dynamic;
-
-    class QueryCommand : ICommand, ICreateDelegate
+    internal class QueryCommand : ICommand, ICreateDelegate
     {
+        #region ICommand Members
+
         public bool IsCommandFor(string method)
         {
             return method.Equals("query", StringComparison.InvariantCultureIgnoreCase);
         }
 
-        public object Execute(DataStrategy dataStrategy, SimpleQuery query, InvokeMemberBinder binder, object[] args)
+        public object Execute(DataStrategy dataStrategy, DynamicTable table, InvokeMemberBinder binder, object[] args)
         {
-            throw new NotImplementedException();
+            return new SimpleQuery(dataStrategy, table.GetQualifiedName());
         }
 
-        public Func<object[], object> CreateDelegate(DataStrategy dataStrategy, DynamicTable table, InvokeMemberBinder binder, object[] args)
+        #endregion
+
+        #region ICreateDelegate Members
+
+        public Func<object[], object> CreateDelegate(DataStrategy dataStrategy, DynamicTable table,
+                                                     InvokeMemberBinder binder, object[] args)
         {
             return a => new SimpleQuery(dataStrategy, table.GetQualifiedName());
         }
 
-        public object Execute(DataStrategy dataStrategy, DynamicTable table, InvokeMemberBinder binder, object[] args)
+        #endregion
+
+        public object Execute(DataStrategy dataStrategy, SimpleQuery query, InvokeMemberBinder binder, object[] args)
         {
-            return new SimpleQuery(dataStrategy, table.GetQualifiedName());
+            throw new NotImplementedException();
         }
     }
 }

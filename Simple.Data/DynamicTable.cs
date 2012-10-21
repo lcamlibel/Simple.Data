@@ -1,28 +1,24 @@
 ﻿using System;
-using System.Collections.Concurrent;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Dynamic;
+using System.Linq;
 using Simple.Data.Commands;
-using Simple.Data.Extensions;
 
 namespace Simple.Data
 {
-    using System.Collections;
-
     /// <summary>
     /// Represents a table in a database, or the nearest equivalent in other data stores.
     /// </summary>
     public class DynamicTable : DynamicObject
     {
+        private readonly DataStrategy _dataStrategy;
         private readonly Dictionary<string, Func<object[], object>> _delegates;
 
-        private readonly ICollection _delegatesAsCollection; 
-        private readonly string _tableName;
+        private readonly ICollection _delegatesAsCollection;
         private readonly DynamicSchema _schema;
-        private readonly DataStrategy _dataStrategy;
+        private readonly string _tableName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DynamicTable"/> class.
@@ -49,6 +45,18 @@ namespace Simple.Data
             _dataStrategy = dataStrategy;
         }
 
+        public ObjectReference this[string name]
+        {
+            get
+            {
+                return new ObjectReference(name,
+                                           new ObjectReference(_tableName,
+                                                               (_schema != null
+                                                                    ? new ObjectReference(_schema.GetName())
+                                                                    : null), _dataStrategy));
+            }
+        }
+
         /// <summary>
         /// Provides the implementation for operations that invoke a member. Classes derived from the <see cref="T:System.Dynamic.DynamicObject"/> class can override this method to specify dynamic behavior for operations such as calling a method.
         /// </summary>
@@ -60,7 +68,7 @@ namespace Simple.Data
         /// </returns>
         public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
         {
-            var signature = FunctionSignature.FromBinder(binder, args);
+            string signature = FunctionSignature.FromBinder(binder, args);
             Func<object[], object> func;
             if (_delegatesAsCollection.IsSynchronized && _delegates.ContainsKey(signature))
             {
@@ -87,7 +95,7 @@ namespace Simple.Data
                 return true;
             }
 
-            var command = CommandFactory.GetCommandFor(binder.Name);
+            ICommand command = CommandFactory.GetCommandFor(binder.Name);
             if (command != null)
             {
                 result = command.Execute(_dataStrategy, this, binder, args);
@@ -103,7 +111,7 @@ namespace Simple.Data
             return base.TryInvokeMember(binder, args, out result);
         }
 
-        private Func<object[],object> CreateMemberDelegate(string signature, InvokeMemberBinder binder, object[] args)
+        private Func<object[], object> CreateMemberDelegate(string signature, InvokeMemberBinder binder, object[] args)
         {
             try
             {
@@ -133,18 +141,18 @@ namespace Simple.Data
                 result = GetAll().ToList();
                 return true;
             }
-            result = new ObjectReference(binder.Name, new ObjectReference(_tableName, (_schema != null ? new ObjectReference(_schema.GetName()) : null), _dataStrategy));
+            result = new ObjectReference(binder.Name,
+                                         new ObjectReference(_tableName,
+                                                             (_schema != null
+                                                                  ? new ObjectReference(_schema.GetName())
+                                                                  : null), _dataStrategy));
             return true;
         }
 
         public ObjectReference As(string alias)
         {
-            return new ObjectReference(_tableName, (_schema != null ? new ObjectReference(_schema.GetName()) : null), _dataStrategy, alias);
-        }
-
-        public ObjectReference this[string name]
-        {
-            get { return new ObjectReference(name, new ObjectReference(_tableName, (_schema != null ? new ObjectReference(_schema.GetName()) : null), _dataStrategy)); }
+            return new ObjectReference(_tableName, (_schema != null ? new ObjectReference(_schema.GetName()) : null),
+                                       _dataStrategy, alias);
         }
 
         internal string GetName()
@@ -159,12 +167,14 @@ namespace Simple.Data
 
         private IEnumerable<dynamic> GetAll()
         {
-            return _dataStrategy.Run.Find(_tableName, null).Select(dict => new SimpleRecord(dict, _tableName, _dataStrategy));
+            return
+                _dataStrategy.Run.Find(_tableName, null).Select(
+                    dict => new SimpleRecord(dict, _tableName, _dataStrategy));
         }
 
         public AllColumnsSpecialReference AllColumns()
         {
-            return new AllColumnsSpecialReference(this.ToObjectReference());
+            return new AllColumnsSpecialReference(ToObjectReference());
         }
 
         public AllColumnsSpecialReference Star()

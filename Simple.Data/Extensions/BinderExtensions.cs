@@ -1,10 +1,10 @@
-﻿namespace Simple.Data.Extensions
-{
-    using System;
-    using System.Dynamic;
-    using System.Reflection;
-    using Microsoft.CSharp.RuntimeBinder;
+﻿using System;
+using System.Dynamic;
+using System.Reflection;
+using Microsoft.CSharp.RuntimeBinder;
 
+namespace Simple.Data.Extensions
+{
     internal static class BinderExtensions
     {
         private static readonly Type TypeOfICSharpInvokeMemberBinder;

@@ -3,8 +3,10 @@ using System.Dynamic;
 
 namespace Simple.Data.Commands
 {
-    class ExistsCommand : ICommand
+    internal class ExistsCommand : ICommand
     {
+        #region ICommand Members
+
         /// <summary>
         /// Determines whether the instance is able to handle the specified method.
         /// </summary>
@@ -14,7 +16,8 @@ namespace Simple.Data.Commands
         /// </returns>
         public bool IsCommandFor(string method)
         {
-            return method.Equals("exists", StringComparison.InvariantCultureIgnoreCase) || method.Equals("any", StringComparison.InvariantCultureIgnoreCase);
+            return method.Equals("exists", StringComparison.InvariantCultureIgnoreCase) ||
+                   method.Equals("any", StringComparison.InvariantCultureIgnoreCase);
         }
 
         /// <summary>
@@ -31,10 +34,12 @@ namespace Simple.Data.Commands
 
             if (args.Length == 1 && args[0] is SimpleExpression)
             {
-                query = query.Where((SimpleExpression)args[0]);
+                query = query.Where((SimpleExpression) args[0]);
             }
 
             return query.Exists();
         }
+
+        #endregion
     }
 }

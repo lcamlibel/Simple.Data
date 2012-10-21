@@ -1,15 +1,15 @@
-﻿namespace Simple.Data.Ado
-{
-    using System;
-    using System.Collections.Generic;
-    using System.ComponentModel.Composition;
-    using System.Data;
-    using System.Data.SqlClient;
-    using System.Linq;
-    using Extensions;
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
+using System.Linq;
 
+namespace Simple.Data.Ado
+{
     public partial class AdoAdapter : IAdapterWithTransactions
     {
+        #region IAdapterWithTransactions Members
+
         public IAdapterTransaction BeginTransaction(IsolationLevel isolationLevel = IsolationLevel.Unspecified)
         {
             IDbConnection connection = CreateConnection();
@@ -18,7 +18,8 @@
             return new AdoAdapterTransaction(transaction, _sharedConnection != null);
         }
 
-        public IAdapterTransaction BeginTransaction(string name, IsolationLevel isolationLevel = IsolationLevel.Unspecified)
+        public IAdapterTransaction BeginTransaction(string name,
+                                                    IsolationLevel isolationLevel = IsolationLevel.Unspecified)
         {
             IDbConnection connection = CreateConnection();
             connection.OpenIfClosed();
@@ -33,9 +34,10 @@
         public IEnumerable<IDictionary<string, object>> InsertMany(string tableName,
                                                                    IEnumerable<IDictionary<string, object>> data,
                                                                    IAdapterTransaction transaction,
-                                                                   Func<IDictionary<string, object>, Exception, bool> onError, bool resultRequired)
+                                                                   Func<IDictionary<string, object>, Exception, bool>
+                                                                       onError, bool resultRequired)
         {
-            return new AdoAdapterInserter(this, ((AdoAdapterTransaction)transaction).DbTransaction).InsertMany(
+            return new AdoAdapterInserter(this, ((AdoAdapterTransaction) transaction).DbTransaction).InsertMany(
                 tableName, data, onError, resultRequired);
         }
 
@@ -44,7 +46,8 @@
         {
             IBulkUpdater bulkUpdater = ProviderHelper.GetCustomProvider<IBulkUpdater>(ConnectionProvider) ??
                                        new BulkUpdater();
-            return bulkUpdater.Update(this, tableName, data.ToList(), ((AdoAdapterTransaction)transaction).DbTransaction);
+            return bulkUpdater.Update(this, tableName, data.ToList(),
+                                      ((AdoAdapterTransaction) transaction).DbTransaction);
         }
 
         public int UpdateMany(string tableName, IEnumerable<IDictionary<string, object>> data,
@@ -52,14 +55,8 @@
         {
             IBulkUpdater bulkUpdater = ProviderHelper.GetCustomProvider<IBulkUpdater>(ConnectionProvider) ??
                                        new BulkUpdater();
-            return bulkUpdater.Update(this, tableName, data.ToList(), ((AdoAdapterTransaction)transaction).DbTransaction);
-        }
-
-        public int Update(string tableName, IDictionary<string, object> data, IAdapterTransaction adapterTransaction)
-        {
-            string[] keyFieldNames = GetKeyNames(tableName).ToArray();
-            if (keyFieldNames.Length == 0) throw new AdoAdapterException("No Primary Key found for implicit update");
-            return Update(tableName, data, GetCriteria(tableName, keyFieldNames, data), adapterTransaction);
+            return bulkUpdater.Update(this, tableName, data.ToList(),
+                                      ((AdoAdapterTransaction) transaction).DbTransaction);
         }
 
         public int UpdateMany(string tableName, IList<IDictionary<string, object>> dataList,
@@ -68,7 +65,7 @@
             IBulkUpdater bulkUpdater = ProviderHelper.GetCustomProvider<IBulkUpdater>(ConnectionProvider) ??
                                        new BulkUpdater();
             return bulkUpdater.Update(this, tableName, dataList, criteriaFieldNames,
-                                      ((AdoAdapterTransaction)adapterTransaction).DbTransaction);
+                                      ((AdoAdapterTransaction) adapterTransaction).DbTransaction);
         }
 
         //public IAdapterTransaction BeginTransaction()
@@ -91,29 +88,33 @@
         //    return new AdoAdapterTransaction(transaction, name, _sharedConnection != null);
         //}
 
-        public IDictionary<string,object> Get(string tableName, IAdapterTransaction transaction, params object[] parameterValues)
+        public IDictionary<string, object> Get(string tableName, IAdapterTransaction transaction,
+                                               params object[] parameterValues)
         {
             return new AdoAdapterGetter(this, ((AdoAdapterTransaction) transaction).DbTransaction).Get(tableName,
-                                                                                                     parameterValues);
+                                                                                                       parameterValues);
         }
 
-        public IEnumerable<IDictionary<string, object>> RunQuery(SimpleQuery query, IAdapterTransaction transaction, out IEnumerable<SimpleQueryClauseBase> unhandledClauses)
+        public IEnumerable<IDictionary<string, object>> RunQuery(SimpleQuery query, IAdapterTransaction transaction,
+                                                                 out IEnumerable<SimpleQueryClauseBase> unhandledClauses)
         {
-            return new AdoAdapterQueryRunner(this, (AdoAdapterTransaction)transaction).RunQuery(query, out unhandledClauses);
+            return new AdoAdapterQueryRunner(this, (AdoAdapterTransaction) transaction).RunQuery(query,
+                                                                                                 out unhandledClauses);
         }
 
         public IEnumerable<IDictionary<string, object>> Find(string tableName, SimpleExpression criteria,
                                                              IAdapterTransaction transaction)
         {
-            return new AdoAdapterFinder(this, ((AdoAdapterTransaction)transaction).DbTransaction).Find(tableName,
-                                                                                                      criteria);
+            return new AdoAdapterFinder(this, ((AdoAdapterTransaction) transaction).DbTransaction).Find(tableName,
+                                                                                                        criteria);
         }
 
         public IDictionary<string, object> Insert(string tableName, IDictionary<string, object> data,
                                                   IAdapterTransaction transaction, bool resultRequired)
         {
-            return new AdoAdapterInserter(this, ((AdoAdapterTransaction)transaction).DbTransaction).Insert(tableName,
-                                                                                                          data, resultRequired);
+            return new AdoAdapterInserter(this, ((AdoAdapterTransaction) transaction).DbTransaction).Insert(tableName,
+                                                                                                            data,
+                                                                                                            resultRequired);
         }
 
         public int Update(string tableName, IDictionary<string, object> data, SimpleExpression criteria,
@@ -129,22 +130,47 @@
             return Execute(commandBuilder, transaction);
         }
 
-        public override IDictionary<string, object> Upsert(string tableName, IDictionary<string, object> data, SimpleExpression criteria, bool resultRequired, IAdapterTransaction adapterTransaction)
+        public override IDictionary<string, object> Upsert(string tableName, IDictionary<string, object> data,
+                                                           SimpleExpression criteria, bool resultRequired,
+                                                           IAdapterTransaction adapterTransaction)
         {
-            var transaction = ((AdoAdapterTransaction) adapterTransaction).DbTransaction;
+            IDbTransaction transaction = ((AdoAdapterTransaction) adapterTransaction).DbTransaction;
             return new AdoAdapterUpserter(this, transaction).Upsert(tableName, data, criteria, resultRequired);
         }
 
-        public override IEnumerable<IDictionary<string, object>> UpsertMany(string tableName, IList<IDictionary<string, object>> list, IAdapterTransaction adapterTransaction, bool isResultRequired, Func<IDictionary<string, object>, Exception, bool> errorCallback)
+        public override IEnumerable<IDictionary<string, object>> UpsertMany(string tableName,
+                                                                            IList<IDictionary<string, object>> list,
+                                                                            IAdapterTransaction adapterTransaction,
+                                                                            bool isResultRequired,
+                                                                            Func
+                                                                                <IDictionary<string, object>, Exception,
+                                                                                bool> errorCallback)
         {
-            var transaction = ((AdoAdapterTransaction) adapterTransaction).DbTransaction;
+            IDbTransaction transaction = ((AdoAdapterTransaction) adapterTransaction).DbTransaction;
             return new AdoAdapterUpserter(this, transaction).UpsertMany(tableName, list, isResultRequired, errorCallback);
         }
 
-        public override IEnumerable<IDictionary<string, object>> UpsertMany(string tableName, IList<IDictionary<string, object>> list, IEnumerable<string> keyFieldNames, IAdapterTransaction adapterTransaction, bool isResultRequired, Func<IDictionary<string, object>, Exception, bool> errorCallback)
+        public override IEnumerable<IDictionary<string, object>> UpsertMany(string tableName,
+                                                                            IList<IDictionary<string, object>> list,
+                                                                            IEnumerable<string> keyFieldNames,
+                                                                            IAdapterTransaction adapterTransaction,
+                                                                            bool isResultRequired,
+                                                                            Func
+                                                                                <IDictionary<string, object>, Exception,
+                                                                                bool> errorCallback)
         {
-            var transaction = ((AdoAdapterTransaction) adapterTransaction).DbTransaction;
-            return new AdoAdapterUpserter(this, transaction).UpsertMany(tableName, list, keyFieldNames.ToArray(), isResultRequired, errorCallback);
+            IDbTransaction transaction = ((AdoAdapterTransaction) adapterTransaction).DbTransaction;
+            return new AdoAdapterUpserter(this, transaction).UpsertMany(tableName, list, keyFieldNames.ToArray(),
+                                                                        isResultRequired, errorCallback);
+        }
+
+        #endregion
+
+        public int Update(string tableName, IDictionary<string, object> data, IAdapterTransaction adapterTransaction)
+        {
+            string[] keyFieldNames = GetKeyNames(tableName).ToArray();
+            if (keyFieldNames.Length == 0) throw new AdoAdapterException("No Primary Key found for implicit update");
+            return Update(tableName, data, GetCriteria(tableName, keyFieldNames, data), adapterTransaction);
         }
     }
 }

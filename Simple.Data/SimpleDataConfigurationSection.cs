@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Configuration;
+using System.Diagnostics;
 
 namespace Simple.Data
 {
-    using System.Configuration;
-    using System.Diagnostics;
-
     public class SimpleDataConfigurationSection : ConfigurationSection
     {
         [ConfigurationProperty("traceLevel", DefaultValue = TraceLevel.Info, IsRequired = false)]

@@ -1,20 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
-using Simple.Data.Extensions;
 
 namespace Simple.Data.Commands
 {
     public class ExecuteFunctionCommand
     {
-        private readonly DataStrategy _database;
         private readonly IAdapterWithFunctions _adapter;
-        private readonly string _functionName;
         private readonly IDictionary<string, object> _arguments;
+        private readonly DataStrategy _database;
+        private readonly string _functionName;
 
-        public ExecuteFunctionCommand(DataStrategy database, IAdapterWithFunctions adapter, string functionName, IDictionary<string, object> arguments)
+        public ExecuteFunctionCommand(DataStrategy database, IAdapterWithFunctions adapter, string functionName,
+                                      IDictionary<string, object> arguments)
         {
             _database = database;
             _adapter = adapter;
@@ -37,9 +35,11 @@ namespace Simple.Data.Commands
             return ToMultipleDynamicEnumerables(resultSets);
         }
 
-        private SimpleResultSet ToMultipleDynamicEnumerables(IEnumerable<IEnumerable<IDictionary<string, object>>> resultSets)
+        private SimpleResultSet ToMultipleDynamicEnumerables(
+            IEnumerable<IEnumerable<IDictionary<string, object>>> resultSets)
         {
-            var result = new SimpleResultSet(resultSets.Select(resultSet => resultSet.Select(dict => new SimpleRecord(dict))));
+            var result =
+                new SimpleResultSet(resultSets.Select(resultSet => resultSet.Select(dict => new SimpleRecord(dict))));
             result.SetOutputValues(_arguments);
             return result;
         }

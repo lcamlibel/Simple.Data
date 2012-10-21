@@ -8,11 +8,15 @@ using Simple.Data.Ado;
 
 namespace Simple.Data.SqlServer
 {
-    [Export(typeof(IQueryPager))]
+    [Export(typeof (IQueryPager))]
     public class SqlQueryPager : IQueryPager
     {
-        private static readonly Regex ColumnExtract = new Regex(@"SELECT\s*(.*)\s*(FROM.*)", RegexOptions.Multiline | RegexOptions.IgnoreCase);
+        private static readonly Regex ColumnExtract = new Regex(@"SELECT\s*(.*)\s*(FROM.*)",
+                                                                RegexOptions.Multiline | RegexOptions.IgnoreCase);
+
         private static readonly Regex SelectMatch = new Regex(@"^SELECT\s*", RegexOptions.IgnoreCase);
+
+        #region IQueryPager Members
 
         public IEnumerable<string> ApplyLimit(string sql, int take)
         {
@@ -23,13 +27,13 @@ namespace Simple.Data.SqlServer
         {
             var builder = new StringBuilder("WITH __Data AS (SELECT ");
 
-            var match = ColumnExtract.Match(sql);
-            var columns = match.Groups[1].Value.Trim();
-            var fromEtc = match.Groups[2].Value.Trim();
+            Match match = ColumnExtract.Match(sql);
+            string columns = match.Groups[1].Value.Trim();
+            string fromEtc = match.Groups[2].Value.Trim();
 
             builder.Append(columns);
 
-            var orderBy = ExtractOrderBy(columns, ref fromEtc);
+            string orderBy = ExtractOrderBy(columns, ref fromEtc);
 
             builder.AppendFormat(", ROW_NUMBER() OVER({0}) AS [_#_]", orderBy);
             builder.AppendLine();
@@ -41,10 +45,12 @@ namespace Simple.Data.SqlServer
             yield return builder.ToString();
         }
 
+        #endregion
+
         private static string DequalifyColumns(string original)
         {
-            var q = from part in original.Split(',')
-                    select part.Substring(Math.Max(part.LastIndexOf('.') + 1, part.LastIndexOf('[')));
+            IEnumerable<string> q = from part in original.Split(',')
+                                    select part.Substring(Math.Max(part.LastIndexOf('.') + 1, part.LastIndexOf('[')));
             return string.Join(",", q);
         }
 
@@ -61,7 +67,7 @@ namespace Simple.Data.SqlServer
             {
                 orderBy = "ORDER BY " + columns.Split(',').First().Trim();
 
-                var aliasIndex = orderBy.IndexOf(" AS [", StringComparison.InvariantCultureIgnoreCase);
+                int aliasIndex = orderBy.IndexOf(" AS [", StringComparison.InvariantCultureIgnoreCase);
 
                 if (aliasIndex > -1)
                 {

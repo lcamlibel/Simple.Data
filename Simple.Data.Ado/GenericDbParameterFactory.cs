@@ -1,9 +1,9 @@
+using System;
+using System.Data;
+using Simple.Data.Ado.Schema;
+
 namespace Simple.Data.Ado
 {
-    using System;
-    using System.Data;
-    using Schema;
-
     internal class GenericDbParameterFactory : IDbParameterFactory
     {
         private readonly IDbCommand _command;
@@ -14,10 +14,12 @@ namespace Simple.Data.Ado
             _command = command;
         }
 
+        #region IDbParameterFactory Members
+
         public IDbDataParameter CreateParameter(string name)
         {
             if (name == null) throw new ArgumentNullException("name");
-            var parameter = _command.CreateParameter();
+            IDbDataParameter parameter = _command.CreateParameter();
             parameter.ParameterName = name;
             return parameter;
         }
@@ -26,10 +28,12 @@ namespace Simple.Data.Ado
         {
             if (name == null) throw new ArgumentNullException("name");
             if (column == null) throw new ArgumentNullException("column");
-            var parameter = _command.CreateParameter();
+            IDbDataParameter parameter = _command.CreateParameter();
             parameter.ParameterName = name;
             parameter.DbType = column.DbType;
-            parameter.Size = column.DbType == DbType.StringFixedLength || column.DbType == DbType.AnsiStringFixedLength ? 0 : column.MaxLength;
+            parameter.Size = column.DbType == DbType.StringFixedLength || column.DbType == DbType.AnsiStringFixedLength
+                                 ? 0
+                                 : column.MaxLength;
             parameter.SourceColumn = column.ActualName;
             return parameter;
         }
@@ -37,11 +41,13 @@ namespace Simple.Data.Ado
         public IDbDataParameter CreateParameter(string name, DbType dbType, int size)
         {
             if (name == null) throw new ArgumentNullException("name");
-            var parameter = _command.CreateParameter();
+            IDbDataParameter parameter = _command.CreateParameter();
             parameter.ParameterName = name;
             parameter.DbType = dbType;
             parameter.Size = size;
             return parameter;
         }
+
+        #endregion
     }
 }

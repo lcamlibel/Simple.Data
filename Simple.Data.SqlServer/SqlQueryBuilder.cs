@@ -25,16 +25,16 @@ namespace Simple.Data.SqlServer
             HandleOrderBy();
 
             unhandledClauses = _unhandledClauses;
-            return _commandBuilder;
+            return CommandBuilder;
         }
 
         protected override string GetSelectClause(ObjectName tableName)
         {
-            var select = base.GetSelectClause(tableName);
-            var forUpdateClause = _query.Clauses.OfType<ForUpdateClause>().FirstOrDefault();
+            string select = base.GetSelectClause(tableName);
+            ForUpdateClause forUpdateClause = Query.Clauses.OfType<ForUpdateClause>().FirstOrDefault();
             if (forUpdateClause != null)
             {
-                var forUpdate = " WITH (UPDLOCK, ROWLOCK";
+                string forUpdate = " WITH (UPDLOCK, ROWLOCK";
                 if (forUpdateClause.SkipLockedRows)
                 {
                     forUpdate += ", READPAST";

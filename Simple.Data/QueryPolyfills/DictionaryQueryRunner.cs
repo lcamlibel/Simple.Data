@@ -61,20 +61,12 @@
 
         private IEnumerable<IDictionary<string, object>> RunWhereClauses(IEnumerable<IDictionary<string, object>> source)
         {
-            foreach (var whereClause in _clauses.OfType<WhereClause>())
-            {
-                source = new WhereClauseHandler(whereClause).Run(source);
-            }
-            return source;
+            return _clauses.OfType<WhereClause>().Aggregate(source, (current, whereClause) => new WhereClauseHandler(whereClause).Run(current));
         }
 
         private IEnumerable<IDictionary<string, object>> RunSelectClauses(IEnumerable<IDictionary<string, object>> source)
         {
-            foreach (var selectClause in _clauses.OfType<SelectClause>())
-            {
-                source = new SelectClauseHandler(selectClause).Run(source);
-            }
-            return source;
+            return _clauses.OfType<SelectClause>().Aggregate(source, (current, selectClause) => new SelectClauseHandler(selectClause).Run(current));
         }
 
         private IEnumerable<IDictionary<string, object>> RunHavingClauses(IEnumerable<IDictionary<string, object>> source)
@@ -86,14 +78,7 @@
 
             List<SimpleReference> selectReferences;
 
-            if (selectClause != null)
-            {
-                selectReferences = selectClause.Columns.ToList();
-            }
-            else
-            {
-                selectReferences = new List<SimpleReference> { new AllColumnsSpecialReference() };
-            }
+            selectReferences = selectClause != null ? selectClause.Columns.ToList() : new List<SimpleReference> { new AllColumnsSpecialReference() };
 
             foreach (var clause in havingClauses)
             {
@@ -108,10 +93,11 @@
 
         private SimpleExpression HavingToWhere(SimpleExpression criteria, List<SimpleReference> selectReferences)
         {
-            if (criteria.LeftOperand is SimpleExpression)
+            var simpleExpression = criteria.LeftOperand as SimpleExpression;
+            if (simpleExpression != null)
             {
-                return new SimpleExpression(HavingToWhere((SimpleExpression) criteria.LeftOperand, selectReferences),
-                                            HavingToWhere((SimpleExpression) criteria.RightOperand, selectReferences),
+                return new SimpleExpression(HavingToWhere(simpleExpression, selectReferences),
+                                            HavingToWhere((SimpleExpression)criteria.RightOperand, selectReferences),
                                             criteria.Type);
             }
 
@@ -146,7 +132,8 @@
         private readonly Func<T, T, bool> _equals;
         private readonly Func<T, int> _getHashCode;
 
-        public GenericEqualityComparer(Func<T, T, bool> @equals) : this(@equals, _ => 1)
+        public GenericEqualityComparer(Func<T, T, bool> @equals)
+            : this(@equals, _ => 1)
         {
         }
 

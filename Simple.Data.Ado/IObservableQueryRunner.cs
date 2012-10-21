@@ -1,21 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Data;
+using System.Data.Common;
 
 namespace Simple.Data.Ado
 {
-    using System.Data;
-    using System.Data.Common;
-
     public interface IObservableQueryRunner
     {
-        IObservable<IDictionary<string, object>> Run(IDbCommand command, IDbConnection connection, IDictionary<string,int> index);
+        IObservable<IDictionary<string, object>> Run(IDbCommand command, IDbConnection connection,
+                                                     IDictionary<string, int> index);
     }
 
-    class ObservableQueryRunner : IObservableQueryRunner
+    internal class ObservableQueryRunner : IObservableQueryRunner
     {
-        public IObservable<IDictionary<string, object>> Run(IDbCommand command, IDbConnection connection, IDictionary<string, int> index)
+        #region IObservableQueryRunner Members
+
+        public IObservable<IDictionary<string, object>> Run(IDbCommand command, IDbConnection connection,
+                                                            IDictionary<string, int> index)
         {
             try
             {
@@ -25,14 +26,19 @@ namespace Simple.Data.Ado
             {
                 throw new AdoAdapterException(ex.Message, ex);
             }
-            var reader = command.TryExecuteReader();
+            IDataReader reader = command.TryExecuteReader();
             if (index == null) index = reader.CreateDictionaryIndex();
 
-            return ColdObservable.Create<IDictionary<string, object>>(o => RunObservable(command, connection, reader, index, o));
+            return
+                ColdObservable.Create<IDictionary<string, object>>(
+                    o => RunObservable(command, connection, reader, index, o));
         }
 
+        #endregion
+
         private static IDisposable RunObservable(IDbCommand command, IDbConnection connection, IDataReader reader,
-                                             IDictionary<string, int> index, IObserver<IDictionary<string, object>> o)
+                                                 IDictionary<string, int> index,
+                                                 IObserver<IDictionary<string, object>> o)
         {
             try
             {
@@ -58,7 +64,9 @@ namespace Simple.Data.Ado
             using (connection)
             using (command)
             using (reader)
-            { /* NoOp */ }
+            {
+                /* NoOp */
+            }
         }
     }
 }

@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Simple.Data.Extensions
 {
@@ -20,11 +18,11 @@ namespace Simple.Data.Extensions
         public static T[] ReplaceOrAppend<T>(this T[] array, T newItem)
             where T : class
         {
-            if (array.Length == 0) return new[] { newItem };
-            var existingItem = array.FirstOrDefault(item => item.GetType() == newItem.GetType());
+            if (array.Length == 0) return new[] {newItem};
+            T existingItem = array.FirstOrDefault(item => item.GetType() == newItem.GetType());
             if (existingItem != null)
             {
-                var replacedArray = (T[])array.Clone();
+                var replacedArray = (T[]) array.Clone();
                 int index = Array.IndexOf(array, existingItem);
                 replacedArray[index] = newItem;
                 return replacedArray;
@@ -37,7 +35,7 @@ namespace Simple.Data.Extensions
 
         public static T[] Replace<T>(this T[] array, int index, T newItem)
         {
-            var newArray = (T[])array.Clone();
+            var newArray = (T[]) array.Clone();
             newArray[index] = newItem;
             return newArray;
         }

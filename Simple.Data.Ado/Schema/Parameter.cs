@@ -1,18 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
-using System.Linq;
-using System.Text;
 
 namespace Simple.Data.Ado.Schema
 {
     public class Parameter
     {
-        private readonly string _name;
-        private readonly Type _type;
+        private readonly DbType _dbtype;
         private readonly ParameterDirection _direction;
-        private int _size;
-        private DbType _dbtype;
+        private readonly string _name;
+        private readonly int _size;
+        private readonly Type _type;
 
         public Parameter(string name, Type type, ParameterDirection direction)
         {
@@ -42,6 +39,7 @@ namespace Simple.Data.Ado.Schema
         {
             get { return _name; }
         }
+
         //Tim Cartwright: I added size and dbtype so inout/out params would function properly.
         public int Size
         {
@@ -52,6 +50,5 @@ namespace Simple.Data.Ado.Schema
         {
             get { return _dbtype; }
         }
-
     }
 }

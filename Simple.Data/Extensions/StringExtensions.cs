@@ -1,11 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace Simple.Data.Extensions
 {
     public static class StringExtensions
     {
+        private static IPluralizer _pluralizer = new SimplePluralizer();
+
         public static bool IsPlural(this string str)
         {
             return _pluralizer.IsPlural(str);
@@ -36,16 +37,16 @@ namespace Simple.Data.Extensions
             return str ?? defaultValue;
         }
 
-        private static IPluralizer _pluralizer = new SimplePluralizer();
-
         internal static void SetPluralizer(IPluralizer pluralizer)
         {
             _pluralizer = pluralizer ?? new SimplePluralizer();
         }
     }
 
-    class SimplePluralizer : IPluralizer
+    internal class SimplePluralizer : IPluralizer
     {
+        #region IPluralizer Members
+
         public bool IsSingular(string word)
         {
             return !IsPlural(word);
@@ -63,8 +64,11 @@ namespace Simple.Data.Extensions
 
         public string Singularize(string word)
         {
-            return word.EndsWith("s", StringComparison.InvariantCultureIgnoreCase) ? word.Substring(0, word.Length - 1) : word;
+            return word.EndsWith("s", StringComparison.InvariantCultureIgnoreCase)
+                       ? word.Substring(0, word.Length - 1)
+                       : word;
         }
-        
+
+        #endregion
     }
 }

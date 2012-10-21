@@ -1,7 +1,7 @@
+using System;
+
 namespace Simple.Data
 {
-    using System;
-
     public class WithCountClause : SimpleQueryClauseBase
     {
         private readonly Action<int> _setCount;

@@ -1,11 +1,9 @@
 ﻿using System.Collections;
-using System.Linq;
-using System.Text;
 using Simple.Data.Ado.Schema;
 
 namespace Simple.Data.Ado
 {
-    class ExpressionFormatter : ExpressionFormatterBase
+    internal class ExpressionFormatter : ExpressionFormatterBase
     {
         private readonly ICommandBuilder _commandBuilder;
         private readonly DatabaseSchema _schema;
@@ -44,7 +42,7 @@ namespace Simple.Data.Ado
             {
                 return null;
             }
-            var table = _schema.FindTable(reference.GetOwner().ToString());
+            Table table = _schema.FindTable(reference.GetOwner().ToString());
             return table.FindColumn(reference.GetName());
         }
     }

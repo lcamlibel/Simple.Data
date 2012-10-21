@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Simple.Data.Extensions;
 
 namespace Simple.Data
 {
-    class AdapterFactory : IAdapterFactory
+    internal class AdapterFactory : IAdapterFactory
     {
         private readonly Composer _composer;
 
@@ -19,6 +18,8 @@ namespace Simple.Data
             _composer = composer;
         }
 
+        #region IAdapterFactory Members
+
         public Adapter Create(object settings)
         {
             return Create(settings.ObjectToDictionary());
@@ -29,11 +30,12 @@ namespace Simple.Data
             return Create(adapterName, settings.ObjectToDictionary());
         }
 
-        public Adapter Create(IEnumerable<KeyValuePair<string,object>> settings)
+        public Adapter Create(IEnumerable<KeyValuePair<string, object>> settings)
         {
-            if (settings.Any( kvp => kvp.Key.Equals("ConnectionString",StringComparison.OrdinalIgnoreCase)))
+            var keyValuePairs = settings as KeyValuePair<string, object>[] ?? settings.ToArray();
+            if (keyValuePairs.Any(kvp => kvp.Key.Equals("ConnectionString", StringComparison.OrdinalIgnoreCase)))
             {
-                return Create("Ado", settings);
+                return Create("Ado", keyValuePairs);
             }
 
             throw new ArgumentException("Cannot infer adapter type from settings.");
@@ -43,6 +45,8 @@ namespace Simple.Data
         {
             return DoCreate(adapterName, settings);
         }
+
+        #endregion
 
         protected Adapter DoCreate(string adapterName, IEnumerable<KeyValuePair<string, object>> settings)
         {

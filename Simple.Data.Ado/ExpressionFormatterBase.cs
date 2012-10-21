@@ -4,12 +4,10 @@ using System.Collections.Generic;
 
 namespace Simple.Data.Ado
 {
-    using Schema;
-
-    abstract class ExpressionFormatterBase : IExpressionFormatter
+    internal abstract class ExpressionFormatterBase : IExpressionFormatter
     {
-        private readonly Lazy<Operators> _operators; 
         private readonly Dictionary<SimpleExpressionType, Func<SimpleExpression, string>> _expressionFormatters;
+        private readonly Lazy<Operators> _operators;
 
         protected ExpressionFormatterBase(Func<Operators> createOperators)
         {
@@ -21,11 +19,23 @@ namespace Simple.Data.Ado
                                             {SimpleExpressionType.Equal, EqualExpressionToWhereClause},
                                             {SimpleExpressionType.NotEqual, NotEqualExpressionToWhereClause},
                                             {SimpleExpressionType.Function, FunctionExpressionToWhereClause},
-                                            {SimpleExpressionType.GreaterThan, expr => BinaryExpressionToWhereClause(expr, Operators.GreaterThan)},
-                                            {SimpleExpressionType.GreaterThanOrEqual, expr => BinaryExpressionToWhereClause(expr, Operators.GreaterThanOrEqual)},
-                                            {SimpleExpressionType.LessThan, expr => BinaryExpressionToWhereClause(expr, Operators.LessThan)},
-                                            {SimpleExpressionType.LessThanOrEqual, expr => BinaryExpressionToWhereClause(expr, Operators.LessThanOrEqual)},
-                                            {SimpleExpressionType.Empty, expr => string.Empty },
+                                            {
+                                                SimpleExpressionType.GreaterThan,
+                                                expr => BinaryExpressionToWhereClause(expr, Operators.GreaterThan)
+                                            },
+                                            {
+                                                SimpleExpressionType.GreaterThanOrEqual,
+                                                expr => BinaryExpressionToWhereClause(expr, Operators.GreaterThanOrEqual)
+                                            },
+                                            {
+                                                SimpleExpressionType.LessThan,
+                                                expr => BinaryExpressionToWhereClause(expr, Operators.LessThan)
+                                            },
+                                            {
+                                                SimpleExpressionType.LessThanOrEqual,
+                                                expr => BinaryExpressionToWhereClause(expr, Operators.LessThanOrEqual)
+                                            },
+                                            {SimpleExpressionType.Empty, expr => string.Empty},
                                         };
         }
 
@@ -33,6 +43,8 @@ namespace Simple.Data.Ado
         {
             get { return _operators.Value; }
         }
+
+        #region IExpressionFormatter Members
 
         public string Format(SimpleExpression expression)
         {
@@ -46,26 +58,32 @@ namespace Simple.Data.Ado
             return string.Empty;
         }
 
+        #endregion
+
         private string LogicalExpressionToWhereClause(SimpleExpression expression)
         {
             return string.Format("({0} {1} {2})",
-                                 Format((SimpleExpression)expression.LeftOperand),
+                                 Format((SimpleExpression) expression.LeftOperand),
                                  expression.Type.ToString().ToUpperInvariant(),
-                                 Format((SimpleExpression)expression.RightOperand));
+                                 Format((SimpleExpression) expression.RightOperand));
         }
 
         private string EqualExpressionToWhereClause(SimpleExpression expression)
         {
-            if (expression.RightOperand == null) return string.Format("{0} {1}", FormatObject(expression.LeftOperand, null), Operators.IsNull);
-            if (CommonTypes.Contains(expression.RightOperand.GetType())) return FormatAsComparison(expression, Operators.Equal);
+            if (expression.RightOperand == null)
+                return string.Format("{0} {1}", FormatObject(expression.LeftOperand, null), Operators.IsNull);
+            if (CommonTypes.Contains(expression.RightOperand.GetType()))
+                return FormatAsComparison(expression, Operators.Equal);
 
             return FormatAsComparison(expression, Operators.Equal);
         }
 
         private string NotEqualExpressionToWhereClause(SimpleExpression expression)
         {
-            if (expression.RightOperand == null) return string.Format("{0} {1}", FormatObject(expression.LeftOperand, null), Operators.IsNotNull);
-            if (CommonTypes.Contains(expression.RightOperand.GetType())) return FormatAsComparison(expression, Operators.NotEqual);
+            if (expression.RightOperand == null)
+                return string.Format("{0} {1}", FormatObject(expression.LeftOperand, null), Operators.IsNotNull);
+            if (CommonTypes.Contains(expression.RightOperand.GetType()))
+                return FormatAsComparison(expression, Operators.NotEqual);
 
             return FormatAsComparison(expression, Operators.NotEqual);
         }
@@ -83,13 +101,15 @@ namespace Simple.Data.Ado
 
             if (function.Name.Equals("like", StringComparison.InvariantCultureIgnoreCase))
             {
-                return string.Format("{0} {1} {2}", FormatObject(expression.LeftOperand, expression.RightOperand), Operators.Like,
+                return string.Format("{0} {1} {2}", FormatObject(expression.LeftOperand, expression.RightOperand),
+                                     Operators.Like,
                                      FormatObject(function.Args[0], expression.LeftOperand));
             }
 
             if (function.Name.Equals("notlike", StringComparison.InvariantCultureIgnoreCase))
             {
-                return string.Format("{0} {1} {2}", FormatObject(expression.LeftOperand, expression.RightOperand), Operators.NotLike,
+                return string.Format("{0} {1} {2}", FormatObject(expression.LeftOperand, expression.RightOperand),
+                                     Operators.NotLike,
                                      FormatObject(function.Args[0], expression.LeftOperand));
             }
 
@@ -110,24 +130,99 @@ namespace Simple.Data.Ado
 
     public class Operators
     {
-        public virtual string Equal { get { return "="; } }
-        public virtual string NotEqual { get { return "!="; } }
-        public virtual string GreaterThan { get { return ">"; } }
-        public virtual string GreaterThanOrEqual { get { return ">="; } }
-        public virtual string LessThan { get { return "<"; } }
-        public virtual string LessThanOrEqual { get { return "<="; } }
-        public virtual string IsNull { get { return "IS NULL"; } }
-        public virtual string IsNotNull { get { return "IS NOT NULL"; } }
-        public virtual string Like { get { return "LIKE"; } }
-        public virtual string NotLike { get { return "NOT LIKE"; } }
-        public virtual string In { get { return "IN"; } }
-        public virtual string NotIn { get { return "NOT IN"; } }
-        public virtual string Between { get { return "BETWEEN"; } }
-        public virtual string NotBetween { get { return "NOT BETWEEN"; } }
-        public virtual string Add { get { return "+"; } }
-        public virtual string Subtract { get { return "-"; } }
-        public virtual string Multiply { get { return "*"; } }
-        public virtual string Divide { get { return "/"; } }
-        public virtual string Modulo { get { return "%"; } }
+        public virtual string Equal
+        {
+            get { return "="; }
+        }
+
+        public virtual string NotEqual
+        {
+            get { return "!="; }
+        }
+
+        public virtual string GreaterThan
+        {
+            get { return ">"; }
+        }
+
+        public virtual string GreaterThanOrEqual
+        {
+            get { return ">="; }
+        }
+
+        public virtual string LessThan
+        {
+            get { return "<"; }
+        }
+
+        public virtual string LessThanOrEqual
+        {
+            get { return "<="; }
+        }
+
+        public virtual string IsNull
+        {
+            get { return "IS NULL"; }
+        }
+
+        public virtual string IsNotNull
+        {
+            get { return "IS NOT NULL"; }
+        }
+
+        public virtual string Like
+        {
+            get { return "LIKE"; }
+        }
+
+        public virtual string NotLike
+        {
+            get { return "NOT LIKE"; }
+        }
+
+        public virtual string In
+        {
+            get { return "IN"; }
+        }
+
+        public virtual string NotIn
+        {
+            get { return "NOT IN"; }
+        }
+
+        public virtual string Between
+        {
+            get { return "BETWEEN"; }
+        }
+
+        public virtual string NotBetween
+        {
+            get { return "NOT BETWEEN"; }
+        }
+
+        public virtual string Add
+        {
+            get { return "+"; }
+        }
+
+        public virtual string Subtract
+        {
+            get { return "-"; }
+        }
+
+        public virtual string Multiply
+        {
+            get { return "*"; }
+        }
+
+        public virtual string Divide
+        {
+            get { return "/"; }
+        }
+
+        public virtual string Modulo
+        {
+            get { return "%"; }
+        }
     }
 }

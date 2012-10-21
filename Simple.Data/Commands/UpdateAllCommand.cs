@@ -1,14 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using Simple.Data.Extensions;
 
 namespace Simple.Data.Commands
 {
-    using System.Collections.Generic;
-
-    class UpdateAllCommand : ICommand
+    internal class UpdateAllCommand : ICommand
     {
+        #region ICommand Members
+
         public bool IsCommandFor(string method)
         {
             return method.Equals("updateall", StringComparison.InvariantCultureIgnoreCase);
@@ -16,9 +17,10 @@ namespace Simple.Data.Commands
 
         public object Execute(DataStrategy dataStrategy, DynamicTable table, InvokeMemberBinder binder, object[] args)
         {
-            var criteria = args.OfType<SimpleExpression>().SingleOrDefault() ?? new SimpleEmptyExpression();
+            SimpleExpression criteria = args.OfType<SimpleExpression>().SingleOrDefault() ?? new SimpleEmptyExpression();
 
-            var data = binder.NamedArgumentsToDictionary(args).Where(kv=>!(kv.Value is SimpleExpression)).ToDictionary();
+            IDictionary<string, object> data =
+                binder.NamedArgumentsToDictionary(args).Where(kv => !(kv.Value is SimpleExpression)).ToDictionary();
 
             if (data.Count == 0)
                 data = args.OfType<IDictionary<string, object>>().SingleOrDefault();
@@ -28,9 +30,11 @@ namespace Simple.Data.Commands
                 throw new SimpleDataException("Could not resolve data.");
             }
 
-            var updatedCount = dataStrategy.Run.Update(table.GetQualifiedName(), data, criteria);
-            
+            int updatedCount = dataStrategy.Run.Update(table.GetQualifiedName(), data, criteria);
+
             return updatedCount.ResultSetFromModifiedRowCount();
         }
+
+        #endregion
     }
 }

@@ -1,17 +1,17 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+
 namespace Simple.Data
 {
-    using System;
-    using System.Collections;
-    using System.Collections.Generic;
-
     public class DictionaryCloner
     {
-        public IDictionary<string, object> CloneDictionary(IDictionary<string,object> source)
+        public IDictionary<string, object> CloneDictionary(IDictionary<string, object> source)
         {
             var cloneable = source as ICloneable;
             if (cloneable != null)
             {
-                return (IDictionary<string, object>)cloneable.Clone();
+                return (IDictionary<string, object>) cloneable.Clone();
             }
 
             var dictionary = source as Dictionary<string, object>;
@@ -23,7 +23,7 @@ namespace Simple.Data
             return CloneCustomDictionary(source);
         }
 
-        private IDictionary<string, object> CloneCustomDictionary(IDictionary<string, object> source)
+        private IDictionary<string, object> CloneCustomDictionary(IEnumerable<KeyValuePair<string, object>> source)
         {
             var clone = Activator.CreateInstance(source.GetType()) as IDictionary<string, object>;
             if (clone == null) throw new InvalidOperationException("Internal data structure cannot be cloned.");
@@ -38,7 +38,8 @@ namespace Simple.Data
             return clone;
         }
 
-        private void CopyDictionaryAndCloneNestedDictionaries(IEnumerable<KeyValuePair<string, object>> dictionary, IDictionary<string, object> clone)
+        private void CopyDictionaryAndCloneNestedDictionaries(IEnumerable<KeyValuePair<string, object>> dictionary,
+                                                              IDictionary<string, object> clone)
         {
             foreach (var keyValuePair in dictionary)
             {
@@ -60,9 +61,11 @@ namespace Simple.Data
             return nestedDictionary != null ? CloneDictionary(nestedDictionary) : source;
         }
 
-        public object CopyNestedDictionaryList(IEnumerable<IDictionary<string, object>> nestedDictionaries, Type collectionType)
+        public object CopyNestedDictionaryList(IEnumerable<IDictionary<string, object>> nestedDictionaries,
+                                               Type collectionType)
         {
-            var collection = Activator.CreateInstance(collectionType) as IList ?? new List<IDictionary<string,object>>();
+            IList collection = Activator.CreateInstance(collectionType) as IList ??
+                               new List<IDictionary<string, object>>();
 
             foreach (var nestedDictionary1 in nestedDictionaries)
             {

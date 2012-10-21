@@ -1,22 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Simple.Data.Ado.Schema;
 
 namespace Simple.Data.Ado
 {
     public class ObjectName : IEquatable<ObjectName>
     {
-        private readonly string _schema;
-        private readonly string _name;
         private readonly string _alias;
+        private readonly string _name;
+        private readonly string _schema;
 
         public ObjectName(object schema, object name)
         {
             if (name == null) throw new ArgumentNullException("name");
-            _schema = schema != null && schema != DBNull.Value ? (string)schema : null;
-            _name = (string)name;
+            _schema = schema != null && schema != DBNull.Value ? (string) schema : null;
+            _name = (string) name;
         }
 
         public ObjectName(string schema, string name) : this(schema, name, null)
@@ -46,6 +42,8 @@ namespace Simple.Data.Ado
             get { return _schema; }
         }
 
+        #region IEquatable<ObjectName> Members
+
         /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.
         /// </summary>
@@ -59,6 +57,8 @@ namespace Simple.Data.Ado
             if (ReferenceEquals(this, other)) return true;
             return Equals(other._schema, _schema) && Equals(other._name, _name) && Equals(other._alias, _alias);
         }
+
+        #endregion
 
         /// <summary>
         /// Determines whether the specified <see cref="T:System.Object"/> is equal to the current <see cref="T:System.Object"/>.
@@ -86,7 +86,8 @@ namespace Simple.Data.Ado
         {
             unchecked
             {
-                return ((_schema??string.Empty).GetHashCode()*397) ^ (_name.GetHashCode()*397) ^ ((_alias??string.Empty).GetHashCode());
+                return ((_schema ?? string.Empty).GetHashCode()*397) ^ (_name.GetHashCode()*397) ^
+                       ((_alias ?? string.Empty).GetHashCode());
             }
         }
 

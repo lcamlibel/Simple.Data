@@ -2,20 +2,18 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Text;
+using Simple.Data.Ado.Schema;
 using Simple.Data.Extensions;
 
 namespace Simple.Data.Ado
 {
-    using Schema;
-
-    class AdoAdapterInserter
+    internal class AdoAdapterInserter
     {
         private readonly AdoAdapter _adapter;
         private readonly IDbConnection _connection;
         private readonly IDbTransaction _transaction;
 
-        public AdoAdapterInserter(AdoAdapter adapter) : this(adapter, (IDbTransaction)null)
+        public AdoAdapterInserter(AdoAdapter adapter) : this(adapter, (IDbTransaction) null)
         {
         }
 
@@ -32,24 +30,30 @@ namespace Simple.Data.Ado
             if (transaction != null) _connection = transaction.Connection;
         }
 
-        public IEnumerable<IDictionary<string, object>> InsertMany(string tableName, IEnumerable<IDictionary<string, object>> data, Func<IDictionary<string,object>, Exception, bool> onError, bool resultRequired)
+        public IEnumerable<IDictionary<string, object>> InsertMany(string tableName,
+                                                                   IEnumerable<IDictionary<string, object>> data,
+                                                                   Func<IDictionary<string, object>, Exception, bool>
+                                                                       onError, bool resultRequired)
         {
             if (data == null) throw new ArgumentNullException("data");
-            var list = data.ToList();
-            var table = _adapter.GetSchema().FindTable(tableName);
+            List<IDictionary<string, object>> list = data.ToList();
+            Table table = _adapter.GetSchema().FindTable(tableName);
             foreach (var row in list)
             {
                 CheckInsertablePropertiesAreAvailable(table, row);
             }
 
-            var bulkInserter = _adapter.ProviderHelper.GetCustomProvider<IBulkInserter>(_adapter.ConnectionProvider) ?? new BulkInserter();
+            IBulkInserter bulkInserter =
+                _adapter.ProviderHelper.GetCustomProvider<IBulkInserter>(_adapter.ConnectionProvider) ??
+                new BulkInserter();
             return bulkInserter.Insert(_adapter, tableName, list, _transaction, onError, resultRequired);
         }
 
-        public IDictionary<string, object> Insert(string tableName, IEnumerable<KeyValuePair<string, object>> data, bool resultRequired)
+        public IDictionary<string, object> Insert(string tableName, IEnumerable<KeyValuePair<string, object>> data,
+                                                  bool resultRequired)
         {
-            var table = _adapter.GetSchema().FindTable(tableName);
-            var dataArray = data.ToArray();
+            Table table = _adapter.GetSchema().FindTable(tableName);
+            KeyValuePair<string, object>[] dataArray = data.ToArray();
             CheckInsertablePropertiesAreAvailable(table, dataArray);
 
             var customInserter = _adapter.ProviderHelper.GetCustomProvider<ICustomInserter>(_adapter.ConnectionProvider);
@@ -58,8 +62,9 @@ namespace Simple.Data.Ado
                 return customInserter.Insert(_adapter, tableName, dataArray.ToDictionary(), _transaction, resultRequired);
             }
 
-            var dataDictionary = dataArray.Where(kvp => table.HasColumn(kvp.Key) && table.FindColumn(kvp.Key).IsWriteable)
-                                     .ToDictionary(kvp => table.FindColumn(kvp.Key), kvp => kvp.Value);
+            Dictionary<Column, object> dataDictionary = dataArray.Where(
+                kvp => table.HasColumn(kvp.Key) && table.FindColumn(kvp.Key).IsWriteable)
+                .ToDictionary(kvp => table.FindColumn(kvp.Key), kvp => kvp.Value);
 
             string columnList = dataDictionary.Keys.Select(c => c.QuotedName).Aggregate((agg, next) => agg + "," + next);
             string valueList = dataDictionary.Keys.Select(s => "?").Aggregate((agg, next) => agg + "," + next);
@@ -68,15 +73,16 @@ namespace Simple.Data.Ado
 
             if (resultRequired)
             {
-                var identityFunction = _adapter.GetIdentityFunction();
+                string identityFunction = _adapter.GetIdentityFunction();
                 if (!string.IsNullOrWhiteSpace(identityFunction))
                 {
-                    var identityColumn = table.Columns.FirstOrDefault(col => col.IsIdentity);
+                    Column identityColumn = table.Columns.FirstOrDefault(col => col.IsIdentity);
 
                     if (identityColumn != null)
                     {
-                        var selectSql = "select * from " + table.QualifiedName + " where " + identityColumn.QuotedName +
-                                        " = " + identityFunction;
+                        string selectSql = "select * from " + table.QualifiedName + " where " +
+                                           identityColumn.QuotedName +
+                                           " = " + identityFunction;
                         if (_adapter.ProviderSupportsCompoundStatements)
                         {
                             insertSql += "; " + selectSql;
@@ -102,19 +108,23 @@ namespace Simple.Data.Ado
             }
         }
 
-        internal IDictionary<string, object> ExecuteSingletonQuery(string sql, IEnumerable<Column> columns, IEnumerable<Object> values)
+        internal IDictionary<string, object> ExecuteSingletonQuery(string sql, IEnumerable<Column> columns,
+                                                                   IEnumerable<Object> values)
         {
             if (_transaction != null)
             {
-                var command = new CommandHelper(_adapter).CreateInsert(_transaction.Connection, sql, columns, values.ToArray());
+                IDbCommand command = new CommandHelper(_adapter).CreateInsert(_transaction.Connection, sql, columns,
+                                                                              values.ToArray());
                 command.Transaction = _transaction;
                 return TryExecuteSingletonQuery(command);
             }
 
-            var connection = _connection ?? _adapter.CreateConnection();
+            IDbConnection connection = _connection ?? _adapter.CreateConnection();
             using (connection.MaybeDisposable())
             {
-                using (var command = new CommandHelper(_adapter).CreateInsert(connection, sql, columns, values.ToArray()))
+                using (
+                    IDbCommand command = new CommandHelper(_adapter).CreateInsert(connection, sql, columns,
+                                                                                  values.ToArray()))
                 {
                     connection.OpenIfClosed();
                     return TryExecuteSingletonQuery(command);
@@ -122,11 +132,14 @@ namespace Simple.Data.Ado
             }
         }
 
-        internal IDictionary<string, object> ExecuteSingletonQuery(string insertSql, string selectSql, IEnumerable<Column> columns, IEnumerable<Object> values)
+        internal IDictionary<string, object> ExecuteSingletonQuery(string insertSql, string selectSql,
+                                                                   IEnumerable<Column> columns,
+                                                                   IEnumerable<Object> values)
         {
             if (_transaction != null)
             {
-                var command = new CommandHelper(_adapter).CreateInsert(_transaction.Connection, insertSql, columns, values.ToArray());
+                IDbCommand command = new CommandHelper(_adapter).CreateInsert(_transaction.Connection, insertSql,
+                                                                              columns, values.ToArray());
                 command.Transaction = _transaction;
                 command.TryExecuteNonQuery();
                 command.CommandText = selectSql;
@@ -134,10 +147,12 @@ namespace Simple.Data.Ado
                 return TryExecuteSingletonQuery(command);
             }
 
-            var connection = _connection ?? _adapter.CreateConnection();
+            IDbConnection connection = _connection ?? _adapter.CreateConnection();
             using (connection.MaybeDisposable())
             {
-                using (var command = new CommandHelper(_adapter).CreateInsert(connection, insertSql, columns, values.ToArray()))
+                using (
+                    IDbCommand command = new CommandHelper(_adapter).CreateInsert(connection, insertSql, columns,
+                                                                                  values.ToArray()))
                 {
                     connection.OpenIfClosed();
                     command.TryExecuteNonQuery();
@@ -150,7 +165,7 @@ namespace Simple.Data.Ado
 
         private static IDictionary<string, object> TryExecuteSingletonQuery(IDbCommand command)
         {
-            using (var reader = command.TryExecuteReader())
+            using (IDataReader reader = command.TryExecuteReader())
             {
                 if (reader.Read())
                 {
@@ -165,14 +180,17 @@ namespace Simple.Data.Ado
         {
             if (_transaction != null)
             {
-                var command = new CommandHelper(_adapter).CreateInsert(_transaction.Connection, sql, columns, values.ToArray());
+                IDbCommand command = new CommandHelper(_adapter).CreateInsert(_transaction.Connection, sql, columns,
+                                                                              values.ToArray());
                 command.Transaction = _transaction;
                 return command.TryExecuteNonQuery();
             }
-            var connection = _connection ?? _adapter.CreateConnection();
+            IDbConnection connection = _connection ?? _adapter.CreateConnection();
             using (connection.MaybeDisposable())
             {
-                using (var command = new CommandHelper(_adapter).CreateInsert(connection, sql, columns, values.ToArray()))
+                using (
+                    IDbCommand command = new CommandHelper(_adapter).CreateInsert(connection, sql, columns,
+                                                                                  values.ToArray()))
                 {
                     connection.OpenIfClosed();
                     return command.TryExecuteNonQuery();

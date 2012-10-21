@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Simple.Data.Ado.Schema;
+﻿using Simple.Data.Ado.Schema;
 
 namespace Simple.Data.Ado
 {
     internal class DeleteHelper
     {
-        private readonly DatabaseSchema _schema;
         private readonly ICommandBuilder _commandBuilder;
         private readonly IExpressionFormatter _expressionFormatter;
+        private readonly DatabaseSchema _schema;
 
         public DeleteHelper(DatabaseSchema schema)
         {
@@ -25,7 +21,7 @@ namespace Simple.Data.Ado
 
             if (criteria != null)
             {
-                var whereCondition = _expressionFormatter.Format(criteria);
+                string whereCondition = _expressionFormatter.Format(criteria);
                 if (!string.IsNullOrEmpty(whereCondition))
                     _commandBuilder.Append(" where " + whereCondition);
             }
@@ -35,7 +31,7 @@ namespace Simple.Data.Ado
 
         private string GetDeleteClause(string tableName)
         {
-            var table = _schema.FindTable(tableName);
+            Table table = _schema.FindTable(tableName);
             return string.Concat("delete from ", table.QualifiedName);
         }
     }

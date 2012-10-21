@@ -1,17 +1,21 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
-using System.Text;
-
-using Simple.Data.Extensions;
-using System.Collections;
 
 namespace Simple.Data
 {
     public class SimpleList : DynamicObject, IList<object>
     {
         private readonly List<object> _innerList;
+
+        public SimpleList(IEnumerable<object> other)
+        {
+            _innerList = new List<object>(other);
+        }
+
+        #region IList<object> Members
 
         public object this[int index]
         {
@@ -27,11 +31,6 @@ namespace Simple.Data
         public bool IsReadOnly
         {
             get { return false; }
-        }
-
-        public SimpleList(IEnumerable<object> other)
-        {
-            _innerList = new List<object>(other);
         }
 
         public void Add(object item)
@@ -81,8 +80,10 @@ namespace Simple.Data
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return ((IEnumerable)_innerList).GetEnumerator();
+            return ((IEnumerable) _innerList).GetEnumerator();
         }
+
+        #endregion
 
         public dynamic ElementAt(int index)
         {
@@ -132,7 +133,7 @@ namespace Simple.Data
                 if (ConcreteCollectionTypeCreator.TryCreate(binder.Type, this, out result))
                     return true;
             }
-       
+
             return base.TryConvert(binder, out result);
         }
     }

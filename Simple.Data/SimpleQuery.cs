@@ -1,17 +1,17 @@
-﻿namespace Simple.Data
-{
-    using System;
-    using System.Collections;
-    using System.Collections.Generic;
-    using System.Dynamic;
-    using System.Linq;
-    using System.Reflection;
-    using System.Text.RegularExpressions;
-    using System.Threading.Tasks;
-    using Commands;
-    using Extensions;
-    using QueryPolyfills;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Dynamic;
+using System.Linq;
+using System.Reflection;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using Simple.Data.Commands;
+using Simple.Data.Extensions;
+using Simple.Data.QueryPolyfills;
 
+namespace Simple.Data
+{
     public class SimpleQuery : DynamicObject, IEnumerable
     {
         private readonly Adapter _adapter;
@@ -85,7 +85,7 @@
             }
             else
             {
-                var join = _clauses.OfType<JoinClause>().FirstOrDefault(j => j.Name.Equals(binder.Name));
+                JoinClause join = _clauses.OfType<JoinClause>().FirstOrDefault(j => j.Name.Equals(binder.Name));
                 if (join != null)
                 {
                     result = join.Table;
@@ -101,13 +101,13 @@
 
         public override bool TryConvert(ConvertBinder binder, out object result)
         {
-            if (binder.Type == typeof(IEnumerable<dynamic>))
+            if (binder.Type == typeof (IEnumerable<dynamic>))
             {
                 result = Cast<dynamic>();
                 return true;
             }
 
-            var collectionType = binder.Type.GetInterface("ICollection`1");
+            Type collectionType = binder.Type.GetInterface("ICollection`1");
             if (collectionType != null)
             {
                 if (TryConvertToGenericCollection(binder, out result, collectionType)) return true;
@@ -115,8 +115,8 @@
 
             if (binder.Type.Name.Equals("IEnumerable`1"))
             {
-                var genericArguments = binder.Type.GetGenericArguments();
-                var cast =
+                Type[] genericArguments = binder.Type.GetGenericArguments();
+                MethodInfo cast =
                     typeof (SimpleQuery).GetMethod("Cast").MakeGenericMethod(genericArguments);
                 result = cast.Invoke(this, null);
                 return true;
@@ -127,8 +127,8 @@
 
         private bool TryConvertToGenericCollection(ConvertBinder binder, out object result, Type collectionType)
         {
-            var genericArguments = collectionType.GetGenericArguments();
-            var enumerableConstructor =
+            Type[] genericArguments = collectionType.GetGenericArguments();
+            ConstructorInfo enumerableConstructor =
                 binder.Type.GetConstructor(new[]
                                                {
                                                    typeof (IEnumerable<>).MakeGenericType(
@@ -136,20 +136,20 @@
                                                });
             if (enumerableConstructor != null)
             {
-                var cast =
+                MethodInfo cast =
                     typeof (SimpleQuery).GetMethod("Cast").MakeGenericMethod(genericArguments);
                 result = Activator.CreateInstance(binder.Type, cast.Invoke(this, null));
                 return true;
             }
 
-            var defaultConstructor = binder.Type.GetConstructor(new Type[0]);
+            ConstructorInfo defaultConstructor = binder.Type.GetConstructor(new Type[0]);
             if (defaultConstructor != null)
             {
                 result = Activator.CreateInstance(binder.Type);
-                var add = binder.Type.GetMethod("Add", genericArguments);
-                var cast =
+                MethodInfo add = binder.Type.GetMethod("Add", genericArguments);
+                MethodInfo cast =
                     typeof (SimpleQuery).GetMethod("Cast").MakeGenericMethod(genericArguments);
-                foreach (var item in (IEnumerable) cast.Invoke(this, null))
+                foreach (object item in (IEnumerable) cast.Invoke(this, null))
                 {
                     add.Invoke(result, new[] {item});
                 }
@@ -197,7 +197,8 @@
         /// <returns>A new <see cref="SimpleQuery"/> which will select only the specified columns.</returns>
         public SimpleQuery ReplaceSelect(IEnumerable<SimpleReference> columns)
         {
-            return new SimpleQuery(this, _clauses.Where(c => !(c is SelectClause)).Append(new SelectClause(columns)).ToArray());
+            return new SimpleQuery(this,
+                                   _clauses.Where(c => !(c is SelectClause)).Append(new SelectClause(columns)).ToArray());
         }
 
         /// <summary>
@@ -207,7 +208,9 @@
         /// <returns>A new <see cref="SimpleQuery"/> which will perform locking on the selected rows</returns>
         public SimpleQuery ForUpdate(bool skipLockedRows)
         {
-            return new SimpleQuery(this, _clauses.Where(c => !(c is ForUpdateClause)).Append(new ForUpdateClause(skipLockedRows)).ToArray());
+            return new SimpleQuery(this,
+                                   _clauses.Where(c => !(c is ForUpdateClause)).Append(
+                                       new ForUpdateClause(skipLockedRows)).ToArray());
         }
 
         /// <summary>
@@ -305,11 +308,11 @@
         protected IEnumerable<dynamic> Run()
         {
             IEnumerable<SimpleQueryClauseBase> unhandledClauses;
-            var result = _dataStrategy.Run.RunQuery(this, out unhandledClauses);
+            IEnumerable<IDictionary<string, object>> result = _dataStrategy.Run.RunQuery(this, out unhandledClauses);
 
             if (unhandledClauses != null)
             {
-                var unhandledClausesList = unhandledClauses.ToList();
+                List<SimpleQueryClauseBase> unhandledClausesList = unhandledClauses.ToList();
                 if (unhandledClausesList.Count > 0)
                 {
                     result = new DictionaryQueryRunner(result, unhandledClausesList).Run();
@@ -337,12 +340,17 @@
             }
             if (binder.Name.Equals("join", StringComparison.OrdinalIgnoreCase))
             {
-                result = args.Length == 1 ? Join(ObjectAsObjectReference(args[0]), JoinType.Inner) : ParseJoin(binder, args);
+                result = args.Length == 1
+                             ? Join(ObjectAsObjectReference(args[0]), JoinType.Inner)
+                             : ParseJoin(binder, args);
                 return true;
             }
-            if (binder.Name.Equals("leftjoin", StringComparison.OrdinalIgnoreCase) || binder.Name.Equals("outerjoin", StringComparison.OrdinalIgnoreCase))
+            if (binder.Name.Equals("leftjoin", StringComparison.OrdinalIgnoreCase) ||
+                binder.Name.Equals("outerjoin", StringComparison.OrdinalIgnoreCase))
             {
-                result = args.Length == 1 ? Join(ObjectAsObjectReference(args[0]), JoinType.Outer) : ParseJoin(binder, args);
+                result = args.Length == 1
+                             ? Join(ObjectAsObjectReference(args[0]), JoinType.Outer)
+                             : ParseJoin(binder, args);
                 return true;
             }
             if (binder.Name.Equals("on", StringComparison.OrdinalIgnoreCase))
@@ -359,7 +367,8 @@
                     return true;
                 }
             }
-            if (binder.Name.StartsWith("with", StringComparison.OrdinalIgnoreCase) && !binder.Name.Equals("WithTotalCount", StringComparison.OrdinalIgnoreCase))
+            if (binder.Name.StartsWith("with", StringComparison.OrdinalIgnoreCase) &&
+                !binder.Name.Equals("WithTotalCount", StringComparison.OrdinalIgnoreCase))
             {
                 result = ParseWith(binder, args);
                 return true;
@@ -370,7 +379,7 @@
                 return true;
             }
 
-            var command = Commands.CommandFactory.GetCommandFor(binder.Name) as IQueryCompatibleCommand;
+            var command = CommandFactory.GetCommandFor(binder.Name) as IQueryCompatibleCommand;
             if (command != null)
             {
                 try
@@ -384,7 +393,9 @@
             }
             try
             {
-                var methodInfo = typeof(SimpleQuery).GetMethod(binder.Name, args.Select(a => (a ?? new object()).GetType()).ToArray());
+                MethodInfo methodInfo = typeof (SimpleQuery).GetMethod(binder.Name,
+                                                                       args.Select(a => (a ?? new object()).GetType()).
+                                                                           ToArray());
                 if (methodInfo != null)
                 {
                     methodInfo.Invoke(this, args);
@@ -394,7 +405,8 @@
             {
             }
 
-            if (binder.Name.Equals("where", StringComparison.InvariantCultureIgnoreCase) || binder.Name.Equals("replacewhere", StringComparison.InvariantCultureIgnoreCase))
+            if (binder.Name.Equals("where", StringComparison.InvariantCultureIgnoreCase) ||
+                binder.Name.Equals("replacewhere", StringComparison.InvariantCultureIgnoreCase))
             {
                 throw new BadExpressionException("Where methods require a single criteria expression.");
             }
@@ -440,8 +452,10 @@
                 }
             }
 
-            var objectName = binder.Name.Substring(4);
-            var withClause = new WithClause(new ObjectReference(objectName, new ObjectReference(_tableName, _dataStrategy), _dataStrategy));
+            string objectName = binder.Name.Substring(4);
+            var withClause =
+                new WithClause(new ObjectReference(objectName, new ObjectReference(_tableName, _dataStrategy),
+                                                   _dataStrategy));
             return new SimpleQuery(this, _clauses.Append(withClause));
         }
 
@@ -515,7 +529,8 @@
         {
             if (_tempJoinWaitingForOn == null)
                 throw new InvalidOperationException("Call to On must be preceded by call to JoinInfo.");
-            return AddNewJoin(new JoinClause(_tempJoinWaitingForOn.Table, _tempJoinWaitingForOn.JoinType, joinExpression));
+            return
+                AddNewJoin(new JoinClause(_tempJoinWaitingForOn.Table, _tempJoinWaitingForOn.JoinType, joinExpression));
         }
 
         [Obsolete]
@@ -552,7 +567,9 @@
 
             if (joinExpression == null) throw new InvalidOperationException();
 
-            var type = binder.Name.Equals("join", StringComparison.OrdinalIgnoreCase) ? JoinType.Inner : JoinType.Outer;
+            JoinType type = binder.Name.Equals("join", StringComparison.OrdinalIgnoreCase)
+                                ? JoinType.Inner
+                                : JoinType.Outer;
             var newJoin = new JoinClause(tableToJoin, type, joinExpression);
 
             return AddNewJoin(newJoin);
@@ -562,9 +579,11 @@
         {
             if (_tempJoinWaitingForOn == null)
                 throw new InvalidOperationException("Call to On must be preceded by call to JoinInfo.");
-            var joinExpression = ExpressionHelper.CriteriaDictionaryToExpression(_tempJoinWaitingForOn.Table,
-                                                                                 binder.NamedArgumentsToDictionary(args));
-            return AddNewJoin(new JoinClause(_tempJoinWaitingForOn.Table, _tempJoinWaitingForOn.JoinType, joinExpression));
+            SimpleExpression joinExpression =
+                ExpressionHelper.CriteriaDictionaryToExpression(_tempJoinWaitingForOn.Table,
+                                                                binder.NamedArgumentsToDictionary(args));
+            return
+                AddNewJoin(new JoinClause(_tempJoinWaitingForOn.Table, _tempJoinWaitingForOn.JoinType, joinExpression));
         }
 
         private SimpleQuery AddNewJoin(JoinClause newJoin)
@@ -617,7 +636,7 @@
 
         public dynamic ToScalar()
         {
-            var data = Run().OfType<IDictionary<string, object>>().ToArray();
+            IDictionary<string, object>[] data = Run().OfType<IDictionary<string, object>>().ToArray();
             if (data.Length == 0)
             {
                 throw new SimpleDataException("Query returned no rows; cannot return scalar value.");
@@ -635,7 +654,7 @@
 
         public dynamic ToScalarOrDefault()
         {
-            var data = Run().OfType<IDictionary<string, object>>().ToArray();
+            IDictionary<string, object>[] data = Run().OfType<IDictionary<string, object>>().ToArray();
             if (data.Length == 0)
             {
                 return null;

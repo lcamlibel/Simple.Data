@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Dynamic;
-using System.Linq;
-using System.Text;
 
 namespace Simple.Data.Commands
 {
-    class FindCommand : ICommand, IQueryCompatibleCommand
+    internal class FindCommand : ICommand, IQueryCompatibleCommand
     {
+        #region ICommand Members
+
         /// <summary>
         /// Determines whether the instance is able to handle the specified method.
         /// </summary>
@@ -32,16 +32,23 @@ namespace Simple.Data.Commands
         {
             if (args.Length == 1 && args[0] is SimpleExpression)
             {
-                var data = dataStrategy.Run.FindOne(table.GetQualifiedName(), (SimpleExpression)args[0]);
+                IDictionary<string, object> data = dataStrategy.Run.FindOne(table.GetQualifiedName(),
+                                                                            (SimpleExpression) args[0]);
                 return data != null ? new SimpleRecord(data, table.GetQualifiedName(), dataStrategy) : null;
             }
 
             throw new BadExpressionException("Find only accepts a criteria expression.");
         }
 
+        #endregion
+
+        #region IQueryCompatibleCommand Members
+
         public object Execute(DataStrategy dataStrategy, SimpleQuery query, InvokeMemberBinder binder, object[] args)
         {
             return query.Where((SimpleExpression) args[0]).Take(1).FirstOrDefault();
         }
+
+        #endregion
     }
 }

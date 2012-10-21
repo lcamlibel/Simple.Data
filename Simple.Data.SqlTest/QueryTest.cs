@@ -95,7 +95,7 @@ namespace Simple.Data.SqlTest
         public void ShouldSelectFromOneToTen()
         {
             var db = DatabaseHelper.Open();
-            var query = db.PagingTest.QueryById(1.to(100)).Take(10);
+            var query = db.PagingTest.QueryById(1.To(100)).Take(10);
             int index = 1;
             foreach (var row in query)
             {
@@ -108,7 +108,7 @@ namespace Simple.Data.SqlTest
         public void ShouldSelectFromElevenToTwenty()
         {
             var db = DatabaseHelper.Open();
-            var query = db.PagingTest.QueryById(1.to(100)).Skip(10).Take(10);
+            var query = db.PagingTest.QueryById(1.To(100)).Skip(10).Take(10);
             int index = 11;
             foreach (var row in query)
             {
@@ -121,7 +121,7 @@ namespace Simple.Data.SqlTest
         public void ShouldSelectFromOneHundredToNinetyOne()
         {
             var db = DatabaseHelper.Open();
-            var query = db.PagingTest.QueryById(1.to(100)).OrderByDescending(db.PagingTest.Id).Skip(0).Take(10);
+            var query = db.PagingTest.QueryById(1.To(100)).OrderByDescending(db.PagingTest.Id).Skip(0).Take(10);
             int index = 100;
             foreach (var row in query)
             {
@@ -135,7 +135,7 @@ namespace Simple.Data.SqlTest
         {
             Promise<int> count;
             var db = DatabaseHelper.Open();
-            var list = db.PagingTest.QueryById(1.to(50))
+            var list = db.PagingTest.QueryById(1.To(50))
                 .Take(10)
                 .WithTotalCount(out count)
                 .ToList();
@@ -150,7 +150,7 @@ namespace Simple.Data.SqlTest
         {
             Promise<int> count;
             var db = DatabaseHelper.Open();
-            List<dynamic> list = db.PagingTest.QueryById(1.to(50))
+            List<dynamic> list = db.PagingTest.QueryById(1.To(50))
                 .Select(db.PagingTest.Id)
                 .WithTotalCount(out count)
                 .Take(10)
@@ -170,7 +170,7 @@ namespace Simple.Data.SqlTest
         {
             Promise<int> count;
             var db = DatabaseHelper.Open();
-            List<dynamic> list = db.PagingTest.QueryById(1.to(50))
+            List<dynamic> list = db.PagingTest.QueryById(1.To(50))
                 .Select(db.PagingTest.Id)
                 .OrderByDescending(db.PagingTest.Id)
                 .WithTotalCount(out count)
@@ -193,7 +193,7 @@ namespace Simple.Data.SqlTest
         {
             Future<int> count;
             var db = DatabaseHelper.Open();
-            var list = db.PagingTest.QueryById(1.to(50))
+            var list = db.PagingTest.QueryById(1.To(50))
                 .WithTotalCount(out count)
                 .Take(10)
                 .ToList();

@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Simple.Data.Commands
 {
-    class CommandFactory
+    internal class CommandFactory
     {
         private static readonly List<ICommand> Commands = new List<ICommand>
                                                               {
@@ -30,7 +30,8 @@ namespace Simple.Data.Commands
                                                                   new UpsertCommand(),
                                                               };
 
-        private static readonly ConcurrentDictionary<string, ICommand> Cache = new ConcurrentDictionary<string, ICommand>();
+        private static readonly ConcurrentDictionary<string, ICommand> Cache =
+            new ConcurrentDictionary<string, ICommand>();
 
         public static ICommand GetCommandFor(string method)
         {

@@ -6,14 +6,16 @@ namespace Simple.Data.Extensions
 {
     public static class EnumerableExtensions
     {
-        public static IDictionary<TKey,TValue> ToDictionary<TKey,TValue>(this IEnumerable<KeyValuePair<TKey,TValue>> source)
+        public static IDictionary<TKey, TValue> ToDictionary<TKey, TValue>(
+            this IEnumerable<KeyValuePair<TKey, TValue>> source)
         {
             var dict = source as IDictionary<TKey, TValue>;
             if (dict != null) return new Dictionary<TKey, TValue>(dict);
             return source.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
         }
 
-        public static IDictionary<TKey,TValue> ToDictionary<TKey,TValue>(this IEnumerable<KeyValuePair<TKey,TValue>> source, IEqualityComparer<TKey> equalityComparer)
+        public static IDictionary<TKey, TValue> ToDictionary<TKey, TValue>(
+            this IEnumerable<KeyValuePair<TKey, TValue>> source, IEqualityComparer<TKey> equalityComparer)
         {
             var dict = source as IDictionary<TKey, TValue>;
             if (dict != null) return new Dictionary<TKey, TValue>(dict);
@@ -22,8 +24,8 @@ namespace Simple.Data.Extensions
 
         public static IEnumerable<T> SkipLast<T>(this IEnumerable<T> source)
         {
-            var buffer = default(T);
-            var enumerator = source.GetEnumerator();
+            T buffer = default(T);
+            IEnumerator<T> enumerator = source.GetEnumerator();
             if (enumerator.MoveNext())
             {
                 buffer = enumerator.Current;
@@ -35,10 +37,10 @@ namespace Simple.Data.Extensions
             }
         }
 
-        public static IEnumerable<Tuple<T,T>> ToTuplePairs<T>(this IEnumerable<T> source)
+        public static IEnumerable<Tuple<T, T>> ToTuplePairs<T>(this IEnumerable<T> source)
         {
-            var buffer = default(T);
-            var enumerator = source.GetEnumerator();
+            T buffer = default(T);
+            IEnumerator<T> enumerator = source.GetEnumerator();
             if (enumerator.MoveNext())
             {
                 buffer = enumerator.Current;
@@ -52,7 +54,7 @@ namespace Simple.Data.Extensions
 
         public static IEnumerable<T> ExtendInfinite<T>(this IEnumerable<T> source)
         {
-            foreach (var item in source)
+            foreach (T item in source)
             {
                 yield return item;
             }

@@ -2,9 +2,6 @@
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using Simple.Data.Extensions;
 
 namespace Simple.Data
 {
@@ -44,12 +41,27 @@ namespace Simple.Data
             _data = data ?? new Dictionary<string, object>();
         }
 
+        #region ICloneable Members
+
+        /// <summary>
+        /// Creates a new object that is a copy of the current instance.
+        /// </summary>
+        /// <returns>
+        /// A new object that is a copy of this instance.
+        /// </returns>
+        public object Clone()
+        {
+            return new SimpleRecord(Cloner.CloneDictionary(_data), _tableName, _database);
+        }
+
+        #endregion
+
         public override bool TryGetMember(GetMemberBinder binder, out object result)
         {
             if (_data.ContainsKey(binder.Name))
             {
                 result = _data[binder.Name];
-                var converted = ConvertResult(result);
+                object converted = ConvertResult(result);
                 if (!ReferenceEquals(result, converted))
                     _data[binder.Name] = result = converted;
 
@@ -84,7 +96,7 @@ namespace Simple.Data
         private object GetRelatedData(GetMemberBinder binder, IAdapterWithRelation relatedAdapter)
         {
             object result;
-            var related = relatedAdapter.FindRelated(_tableName, _data, binder.Name);
+            object related = relatedAdapter.FindRelated(_tableName, _data, binder.Name);
             var query = related as SimpleQuery;
             if (query != null)
             {
@@ -96,9 +108,8 @@ namespace Simple.Data
                 result = related is IDictionary<string, object>
                              ? (object) new SimpleRecord(related as IDictionary<string, object>, binder.Name, _database)
                              : ((IEnumerable<IDictionary<string, object>>) related).Select(
-                                       dict => new SimpleRecord(dict, binder.Name, _database)).ToList<dynamic>();
+                                 dict => new SimpleRecord(dict, binder.Name, _database)).ToList<dynamic>();
                 _data[binder.Name] = result;
-
             }
             return result;
         }
@@ -143,17 +154,6 @@ namespace Simple.Data
             return result;
         }
 
-        /// <summary>
-        /// Creates a new object that is a copy of the current instance.
-        /// </summary>
-        /// <returns>
-        /// A new object that is a copy of this instance.
-        /// </returns>
-        public object Clone()
-        {
-            return new SimpleRecord(Cloner.CloneDictionary(_data), _tableName, _database);
-        }
-
         public object ToScalar()
         {
             if (_data == null || _data.Count == 0) return null;
@@ -163,7 +163,7 @@ namespace Simple.Data
         public T ToScalar<T>()
         {
             if (_data == null || _data.Count == 0) return default(T);
-            return (T)_data.First().Value;
+            return (T) _data.First().Value;
         }
     }
 }

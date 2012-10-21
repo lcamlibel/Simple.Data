@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace Simple.Data
 {
@@ -9,9 +8,9 @@ namespace Simple.Data
         where T : IComparable<T>
     {
         private static readonly EqualityComparer<T> EqualityComparer = EqualityComparer<T>.Default;
- 
-        private readonly T _start;
+
         private readonly T _end;
+        private readonly T _start;
 
         public Range(T start, T end)
             : this()
@@ -25,36 +24,12 @@ namespace Simple.Data
             get { return _end; }
         }
 
-        IEnumerable<object> IRange.AsEnumerable()
-        {
-            return AsEnumerable().Cast<object>();
-        }
-
-        public IEnumerable<T> AsEnumerable()
-        {
-            var end = _end;
-            return AsEnumerable(_ => end);
-        }
-
-        public IEnumerable<T> AsEnumerable(Func<T,T> step)
-        {
-            T current = _start;
-            do
-            {
-                yield return current;
-                current = step(current);
-            } while (current.CompareTo(_end) <= 0);
-        }
-
         public T Start
         {
             get { return _start; }
         }
 
-        public override string ToString()
-        {
-            return string.Format("({0}..{1})", _start, _end);
-        }
+        #region IEquatable<Range<T>> Members
 
         /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.
@@ -68,6 +43,48 @@ namespace Simple.Data
             return EqualityComparer.Equals(other._start, _start) && EqualityComparer.Equals(other._end, _end);
         }
 
+        #endregion
+
+        #region IRange Members
+
+        IEnumerable<object> IRange.AsEnumerable()
+        {
+            return AsEnumerable().Cast<object>();
+        }
+
+        object IRange.Start
+        {
+            get { return Start; }
+        }
+
+        object IRange.End
+        {
+            get { return End; }
+        }
+
+        #endregion
+
+        public IEnumerable<T> AsEnumerable()
+        {
+            T end = _end;
+            return AsEnumerable(_ => end);
+        }
+
+        public IEnumerable<T> AsEnumerable(Func<T, T> step)
+        {
+            T current = _start;
+            do
+            {
+                yield return current;
+                current = step(current);
+            } while (current.CompareTo(_end) <= 0);
+        }
+
+        public override string ToString()
+        {
+            return string.Format("({0}..{1})", _start, _end);
+        }
+
         /// <summary>
         /// Indicates whether this instance and a specified object are equal.
         /// </summary>
@@ -78,8 +95,8 @@ namespace Simple.Data
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj)) return false;
-            if (obj.GetType() != typeof(Range<T>)) return false;
-            return Equals((Range<T>)obj);
+            if (obj.GetType() != typeof (Range<T>)) return false;
+            return Equals((Range<T>) obj);
         }
 
         /// <summary>
@@ -93,7 +110,7 @@ namespace Simple.Data
         {
             unchecked
             {
-                return (_start.GetHashCode() * 397) ^ _end.GetHashCode();
+                return (_start.GetHashCode()*397) ^ _end.GetHashCode();
             }
         }
 
@@ -105,16 +122,6 @@ namespace Simple.Data
         public static bool operator !=(Range<T> left, Range<T> right)
         {
             return !left.Equals(right);
-        }
-
-        object IRange.Start
-        {
-            get { return Start; }
-        }
-
-        object IRange.End
-        {
-            get { return End; }
         }
     }
 }

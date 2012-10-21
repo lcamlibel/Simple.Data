@@ -1,11 +1,11 @@
-﻿namespace Simple.Data
-{
-    using System;
-    using System.Collections.Generic;
-    using System.Dynamic;
-    using System.Linq;
-    using Extensions;
+﻿using System;
+using System.Collections.Generic;
+using System.Dynamic;
+using System.Linq;
+using Simple.Data.Extensions;
 
+namespace Simple.Data
+{
     /// <summary>
     /// Provides a base class for adapters to persist data to data storage systems.
     /// Authors may derive from this class to create support for all kinds of databases or data stores.
@@ -13,6 +13,7 @@
     public abstract class Adapter
     {
         private readonly ExpandoObject _settings = new ExpandoObject();
+        private OptimizingDelegateFactory _optimizingDelegateFactory;
 
         /// <summary>
         /// Gets an <see cref="ExpandoObject"/> with the settings for this <see cref="Adapter"/>.
@@ -23,6 +24,13 @@
         protected dynamic Settings
         {
             get { return _settings; }
+        }
+
+        public OptionsBase Options { get; set; }
+
+        public OptimizingDelegateFactory OptimizingDelegateFactory
+        {
+            get { return _optimizingDelegateFactory ?? (_optimizingDelegateFactory = CreateOptimizingDelegateFactory()); }
         }
 
         /// <summary>
@@ -49,8 +57,6 @@
             OnSetup();
         }
 
-        public OptionsBase Options { get; set; }
-
         /// <summary>
         /// Called when the <see cref="Setup(object)"/> method is called, after the settings have been set.
         /// </summary>
@@ -72,7 +78,7 @@
         /// </summary>
         /// <param name="tableName">Name of the table.</param>
         /// <returns>An <c>IList&lt;string&gt;</c> containing the key names that uniquely identify a record in the database.</returns>
-        public abstract IList<string> GetKeyNames(string tableName); 
+        public abstract IList<string> GetKeyNames(string tableName);
 
         /// <summary>
         /// Gets a single record from the specified "table" using its default key.
@@ -80,7 +86,7 @@
         /// <param name="tableName">Name of the table.</param>
         /// <param name="keyValues">The values to search with.</param>
         /// <returns>The record matching the supplied key. If no record is found, return <c>null</c>.</returns>
-        public abstract IDictionary<string, object> Get(string tableName, params object[] keyValues); 
+        public abstract IDictionary<string, object> Get(string tableName, params object[] keyValues);
 
         /// <summary>
         /// Finds data from the specified "table".
@@ -106,7 +112,8 @@
         /// <param name="data">The values to insert.</param>
         /// <param name="resultRequired"><c>true</c> if the insert call uses a return value; otherwise, <c>false</c>.</param>
         /// <returns>If possible, return the newly inserted row, including any automatically-set values such as primary keys or timestamps.</returns>
-        public abstract IDictionary<string, object> Insert(string tableName, IDictionary<string, object> data, bool resultRequired);
+        public abstract IDictionary<string, object> Insert(string tableName, IDictionary<string, object> data,
+                                                           bool resultRequired);
 
         /// <summary>
         /// Updates the specified "table" according to specified criteria.
@@ -156,9 +163,12 @@
         /// <remarks>This method has a default implementation based on the <see cref="Insert(string,IDictionary{string,object},bool)"/> method.
         /// You should override this method if your adapter can optimize the operation.</remarks>
         public virtual IEnumerable<IDictionary<string, object>> InsertMany(string tableName,
-                                                                           IEnumerable<IDictionary<string, object>> dataList,
-                                                                           Func<IDictionary<string, object>, Exception, bool> onError,
-            bool resultRequired)
+                                                                           IEnumerable<IDictionary<string, object>>
+                                                                               dataList,
+                                                                           Func
+                                                                               <IDictionary<string, object>, Exception,
+                                                                               bool> onError,
+                                                                           bool resultRequired)
         {
             if (resultRequired)
             {
@@ -168,7 +178,12 @@
             return null;
         }
 
-        private IEnumerable<IDictionary<string, object>> InsertManyAndReturn(string tableName, IEnumerable<IDictionary<string, object>> dataList, Func<IDictionary<string, object>, Exception, bool> onError)
+        private IEnumerable<IDictionary<string, object>> InsertManyAndReturn(string tableName,
+                                                                             IEnumerable<IDictionary<string, object>>
+                                                                                 dataList,
+                                                                             Func
+                                                                                 <IDictionary<string, object>, Exception
+                                                                                 , bool> onError)
         {
             foreach (var row in dataList)
             {
@@ -193,7 +208,8 @@
             }
         }
 
-        private void InsertManyWithoutReturn(string tableName, IEnumerable<IDictionary<string, object>> dataList, Func<IDictionary<string, object>, Exception, bool> onError)
+        private void InsertManyWithoutReturn(string tableName, IEnumerable<IDictionary<string, object>> dataList,
+                                             Func<IDictionary<string, object>, Exception, bool> onError)
         {
             foreach (var row in dataList)
             {
@@ -226,14 +242,9 @@
         /// You should override this method if your adapter can optimize the operation.</remarks>
         public virtual int UpdateMany(string tableName, IEnumerable<IDictionary<string, object>> data)
         {
-            int updateCount = 0;
-            foreach (var row in data)
-            {
-                var key = GetKey(tableName, row);
-                var criteria = ExpressionHelper.CriteriaDictionaryToExpression(tableName, key);
-                updateCount += Update(tableName, row, criteria);
-            }
-            return updateCount;
+            return (from row in data let key = GetKey(tableName, row) 
+                    let criteria = ExpressionHelper.CriteriaDictionaryToExpression(tableName, key) 
+                    select Update(tableName, row, criteria)).Sum();
         }
 
         /// <summary>
@@ -262,16 +273,16 @@
         /// <remarks>This method has a default implementation based on the <see cref="RunQuery"/> method.
         /// You should override this method if your adapter can optimize the operation.</remarks>
         public virtual IEnumerable<IEnumerable<IDictionary<string, object>>> RunQueries(SimpleQuery[] queries,
-                                                                                         List
-                                                                                             <
-                                                                                             IEnumerable
-                                                                                             <SimpleQueryClauseBase>>
-                                                                                             unhandledClauses)
+                                                                                        List
+                                                                                            <
+                                                                                            IEnumerable
+                                                                                            <SimpleQueryClauseBase>>
+                                                                                            unhandledClauses)
         {
-            foreach (var query in queries)
+            foreach (SimpleQuery query in queries)
             {
                 IEnumerable<SimpleQueryClauseBase> unhandledClausesForThisQuery;
-                var result = RunQuery(query, out unhandledClausesForThisQuery);
+                IEnumerable<IDictionary<string, object>> result = RunQuery(query, out unhandledClausesForThisQuery);
                 unhandledClauses.Add(unhandledClausesForThisQuery);
                 yield return result;
             }
@@ -291,13 +302,8 @@
         public virtual int UpdateMany(string tableName, IEnumerable<IDictionary<string, object>> dataList,
                                       IEnumerable<string> criteriaFieldNames)
         {
-            int updatedCount = 0;
-            var criteriaFieldNameList = criteriaFieldNames.ToList();
-            foreach (var data in dataList)
-            {
-                updatedCount += Update(tableName, data, GetCriteria(tableName, criteriaFieldNameList, data));
-            }
-            return updatedCount;
+            List<string> criteriaFieldNameList = criteriaFieldNames.ToList();
+            return dataList.Sum(data => Update(tableName, data, GetCriteria(tableName, criteriaFieldNameList, data)));
         }
 
         /// <summary>
@@ -337,10 +343,11 @@
         {
             var criteria = new Dictionary<string, object>();
 
-            foreach (var criteriaFieldName in criteriaFieldNames)
+            foreach (string criteriaFieldName in criteriaFieldNames)
             {
-                var name = criteriaFieldName;
-                var keyValuePair = record.SingleOrDefault(kvp => kvp.Key.Homogenize().Equals(name.Homogenize()));
+                string name = criteriaFieldName;
+                KeyValuePair<string, object> keyValuePair =
+                    record.SingleOrDefault(kvp => kvp.Key.Homogenize().Equals(name.Homogenize()));
                 if (string.IsNullOrWhiteSpace(keyValuePair.Key))
                 {
                     throw new InvalidOperationException("Key field value not set.");
@@ -361,24 +368,20 @@
         {
         }
 
-        private OptimizingDelegateFactory _optimizingDelegateFactory;
-
-        public OptimizingDelegateFactory OptimizingDelegateFactory
-        {
-            get { return _optimizingDelegateFactory ?? (_optimizingDelegateFactory = CreateOptimizingDelegateFactory()); }
-        }
-
         private OptimizingDelegateFactory CreateOptimizingDelegateFactory()
         {
-            return MefHelper.GetAdjacentComponent<OptimizingDelegateFactory>(GetType()) ?? new DefaultOptimizingDelegateFactory();
+            return MefHelper.GetAdjacentComponent<OptimizingDelegateFactory>(GetType()) ??
+                   new DefaultOptimizingDelegateFactory();
         }
 
-        public virtual IDictionary<string, object> Upsert(string tableName, IDictionary<string, object> dict, SimpleExpression criteriaExpression, bool isResultRequired)
+        public virtual IDictionary<string, object> Upsert(string tableName, IDictionary<string, object> dict,
+                                                          SimpleExpression criteriaExpression, bool isResultRequired)
         {
             if (Find(tableName, criteriaExpression).Any())
             {
-                var key = GetKey(tableName, dict);
-                dict = dict.Where(kvp => key.All(keyKvp => keyKvp.Key.Homogenize() != kvp.Key.Homogenize())).ToDictionary();
+                IDictionary<string, object> key = GetKey(tableName, dict);
+                dict =
+                    dict.Where(kvp => key.All(keyKvp => keyKvp.Key.Homogenize() != kvp.Key.Homogenize())).ToDictionary();
                 Update(tableName, dict, criteriaExpression);
                 return isResultRequired ? Find(tableName, criteriaExpression).FirstOrDefault() : null;
             }
@@ -386,7 +389,13 @@
             return Insert(tableName, dict, isResultRequired);
         }
 
-        public virtual IEnumerable<IDictionary<string, object>> UpsertMany(string tableName, IList<IDictionary<string, object>> list, IEnumerable<string> keyFieldNames, bool isResultRequired, Func<IDictionary<string,object>,Exception,bool> errorCallback)
+        public virtual IEnumerable<IDictionary<string, object>> UpsertMany(string tableName,
+                                                                           IList<IDictionary<string, object>> list,
+                                                                           IEnumerable<string> keyFieldNames,
+                                                                           bool isResultRequired,
+                                                                           Func
+                                                                               <IDictionary<string, object>, Exception,
+                                                                               bool> errorCallback)
         {
             if (isResultRequired)
                 return UpsertManyWithResults(tableName, list, keyFieldNames, errorCallback);
@@ -394,16 +403,21 @@
             return null;
         }
 
-        private IEnumerable<IDictionary<string, object>> UpsertManyWithResults(string tableName, IEnumerable<IDictionary<string, object>> list, IEnumerable<string> keyFieldNames,
-                                                  Func<IDictionary<string, object>, Exception, bool> errorCallback)
+        private IEnumerable<IDictionary<string, object>> UpsertManyWithResults(string tableName,
+                                                                               IEnumerable<IDictionary<string, object>>
+                                                                                   list,
+                                                                               IEnumerable<string> keyFieldNames,
+                                                                               Func
+                                                                                   <IDictionary<string, object>,
+                                                                                   Exception, bool> errorCallback)
         {
-            var criteriaFields = keyFieldNames.ToArray();
+            string[] criteriaFields = keyFieldNames.ToArray();
             foreach (var row in list)
             {
                 IDictionary<string, object> result;
                 try
                 {
-                    var criteria = GetCriteria(tableName, criteriaFields, row);
+                    SimpleExpression criteria = GetCriteria(tableName, criteriaFields, row);
                     result = Upsert(tableName, row, criteria, true);
                 }
                 catch (Exception ex)
@@ -415,15 +429,16 @@
             }
         }
 
-        private void UpsertManyWithoutResults(string tableName, IEnumerable<IDictionary<string, object>> list, IEnumerable<string> keyFieldNames,
-                                                  Func<IDictionary<string, object>, Exception, bool> errorCallback)
+        private void UpsertManyWithoutResults(string tableName, IEnumerable<IDictionary<string, object>> list,
+                                              IEnumerable<string> keyFieldNames,
+                                              Func<IDictionary<string, object>, Exception, bool> errorCallback)
         {
-            var criteriaFields = keyFieldNames.ToArray();
+            string[] criteriaFields = keyFieldNames.ToArray();
             foreach (var row in list)
             {
                 try
                 {
-                    var criteria = GetCriteria(tableName, criteriaFields, row);
+                    SimpleExpression criteria = GetCriteria(tableName, criteriaFields, row);
                     Upsert(tableName, row, criteria, false);
                 }
                 catch (Exception ex)
@@ -434,35 +449,59 @@
             }
         }
 
-        public virtual IDictionary<string, object> Upsert(string tableName, IDictionary<string, object> dict, SimpleExpression criteriaExpression, bool isResultRequired, IAdapterTransaction transaction)
+        public virtual IDictionary<string, object> Upsert(string tableName, IDictionary<string, object> dict,
+                                                          SimpleExpression criteriaExpression, bool isResultRequired,
+                                                          IAdapterTransaction transaction)
         {
             var transactionAdapter = this as IAdapterWithTransactions;
-            if (transactionAdapter == null) throw new NotSupportedException("Transactions are not supported with current adapter.");
+            if (transactionAdapter == null)
+                throw new NotSupportedException("Transactions are not supported with current adapter.");
             if (transactionAdapter.Find(tableName, criteriaExpression, transaction).Any())
             {
                 transactionAdapter.Update(tableName, dict, criteriaExpression, transaction);
-                return isResultRequired ? transactionAdapter.Find(tableName, criteriaExpression, transaction).FirstOrDefault() : null;
+                return isResultRequired
+                           ? transactionAdapter.Find(tableName, criteriaExpression, transaction).FirstOrDefault()
+                           : null;
             }
 
             return transactionAdapter.Insert(tableName, dict, transaction, isResultRequired);
         }
 
-        public virtual IEnumerable<IDictionary<string, object>> UpsertMany(string tableName, IList<IDictionary<string, object>> list, IEnumerable<string> keyFieldNames, IAdapterTransaction transaction, bool isResultRequired, Func<IDictionary<string,object>,Exception,bool> errorCallback)
+        public virtual IEnumerable<IDictionary<string, object>> UpsertMany(string tableName,
+                                                                           IList<IDictionary<string, object>> list,
+                                                                           IEnumerable<string> keyFieldNames,
+                                                                           IAdapterTransaction transaction,
+                                                                           bool isResultRequired,
+                                                                           Func
+                                                                               <IDictionary<string, object>, Exception,
+                                                                               bool> errorCallback)
         {
             var transactionAdapter = this as IAdapterWithTransactions;
-            if (transactionAdapter == null) throw new NotSupportedException("Transactions are not supported with current adapter.");
+            if (transactionAdapter == null)
+                throw new NotSupportedException("Transactions are not supported with current adapter.");
 
-            var criteriaFields = keyFieldNames.ToArray();
+            string[] criteriaFields = keyFieldNames.ToArray();
             if (isResultRequired)
             {
-                return UpsertManyWithResults(tableName, list, transaction, transactionAdapter, criteriaFields, errorCallback);
+                return UpsertManyWithResults(tableName, list, transaction, transactionAdapter, criteriaFields,
+                                             errorCallback);
             }
 
             UpsertManyWithoutResults(tableName, list, transaction, transactionAdapter, criteriaFields, errorCallback);
             return null;
         }
 
-        private static IEnumerable<IDictionary<string, object>> UpsertManyWithResults(string tableName, IEnumerable<IDictionary<string, object>> list, IAdapterTransaction transaction, IAdapterWithTransactions transactionAdapter, string[] criteriaFields, Func<IDictionary<string, object>, Exception, bool> errorCallback)
+        private static IEnumerable<IDictionary<string, object>> UpsertManyWithResults(string tableName,
+                                                                                      IEnumerable
+                                                                                          <IDictionary<string, object>>
+                                                                                          list,
+                                                                                      IAdapterTransaction transaction,
+                                                                                      IAdapterWithTransactions
+                                                                                          transactionAdapter,
+                                                                                      string[] criteriaFields,
+                                                                                      Func
+                                                                                          <IDictionary<string, object>,
+                                                                                          Exception, bool> errorCallback)
         {
             foreach (var row in list)
             {
@@ -470,7 +509,7 @@
 
                 try
                 {
-                    var criteria = GetCriteria(tableName, criteriaFields, row);
+                    SimpleExpression criteria = GetCriteria(tableName, criteriaFields, row);
                     result = transactionAdapter.Upsert(tableName, row, criteria, true, transaction);
                 }
                 catch (Exception ex)
@@ -486,11 +525,15 @@
             }
         }
 
-        private static void UpsertManyWithoutResults(string tableName, IEnumerable<IDictionary<string, object>> list, IAdapterTransaction transaction, IAdapterWithTransactions transactionAdapter, string[] criteriaFields, Func<IDictionary<string, object>, Exception, bool> errorCallback)
+        private static void UpsertManyWithoutResults(string tableName, IEnumerable<IDictionary<string, object>> list,
+                                                     IAdapterTransaction transaction,
+                                                     IAdapterWithTransactions transactionAdapter,
+                                                     string[] criteriaFields,
+                                                     Func<IDictionary<string, object>, Exception, bool> errorCallback)
         {
             foreach (var row in list)
             {
-                var criteria = GetCriteria(tableName, criteriaFields, row);
+                SimpleExpression criteria = GetCriteria(tableName, criteriaFields, row);
                 try
                 {
                     transactionAdapter.Upsert(tableName, row, criteria, true, transaction);
@@ -506,7 +549,12 @@
             }
         }
 
-        public virtual IEnumerable<IDictionary<string, object>> UpsertMany(string tableName, IList<IDictionary<string, object>> list, bool isResultRequired, Func<IDictionary<string,object>,Exception,bool> errorCallback)
+        public virtual IEnumerable<IDictionary<string, object>> UpsertMany(string tableName,
+                                                                           IList<IDictionary<string, object>> list,
+                                                                           bool isResultRequired,
+                                                                           Func
+                                                                               <IDictionary<string, object>, Exception,
+                                                                               bool> errorCallback)
         {
             if (isResultRequired)
             {
@@ -516,18 +564,23 @@
             return null;
         }
 
-        private IEnumerable<IDictionary<string, object>> UpsertManyWithResults(string tableName, IEnumerable<IDictionary<string, object>> list, Func<IDictionary<string, object>, Exception, bool> errorCallback)
+        private IEnumerable<IDictionary<string, object>> UpsertManyWithResults(string tableName,
+                                                                               IEnumerable<IDictionary<string, object>>
+                                                                                   list,
+                                                                               Func
+                                                                                   <IDictionary<string, object>,
+                                                                                   Exception, bool> errorCallback)
         {
             foreach (var row in list)
             {
                 IDictionary<string, object> result;
                 try
                 {
-                    var key = GetKey(tableName, row);
-                    var criteria = ExpressionHelper.CriteriaDictionaryToExpression(tableName, key);
+                    IDictionary<string, object> key = GetKey(tableName, row);
+                    SimpleExpression criteria = ExpressionHelper.CriteriaDictionaryToExpression(tableName, key);
                     if (Find(tableName, criteria).Any())
                     {
-                        var record = row.Except(key).ToDictionary();
+                        IDictionary<string, object> record = row.Except(key).ToDictionary();
                         Update(tableName, record, criteria);
                         result = FindOne(tableName, criteria);
                     }
@@ -548,17 +601,18 @@
             }
         }
 
-        private void UpsertManyWithoutResults(string tableName, IEnumerable<IDictionary<string, object>> list, Func<IDictionary<string, object>, Exception, bool> errorCallback)
+        private void UpsertManyWithoutResults(string tableName, IEnumerable<IDictionary<string, object>> list,
+                                              Func<IDictionary<string, object>, Exception, bool> errorCallback)
         {
             foreach (var row in list)
             {
                 try
                 {
-                    var key = GetKey(tableName, row);
-                    var criteria = ExpressionHelper.CriteriaDictionaryToExpression(tableName, key);
+                    IDictionary<string, object> key = GetKey(tableName, row);
+                    SimpleExpression criteria = ExpressionHelper.CriteriaDictionaryToExpression(tableName, key);
                     if (Find(tableName, criteria).Any())
                     {
-                        var record = row.Except(key).ToDictionary();
+                        IDictionary<string, object> record = row.Except(key).ToDictionary();
                         Update(tableName, record, criteria);
                     }
                     else
@@ -573,23 +627,32 @@
             }
         }
 
-        public virtual IEnumerable<IDictionary<string, object>> UpsertMany(string tableName, IList<IDictionary<string, object>> list, IAdapterTransaction transaction, bool isResultRequired, Func<IDictionary<string,object>,Exception,bool> errorCallback)
+        public virtual IEnumerable<IDictionary<string, object>> UpsertMany(string tableName,
+                                                                           IList<IDictionary<string, object>> list,
+                                                                           IAdapterTransaction transaction,
+                                                                           bool isResultRequired,
+                                                                           Func
+                                                                               <IDictionary<string, object>, Exception,
+                                                                               bool> errorCallback)
         {
             var transactionAdapter = this as IAdapterWithTransactions;
-            if (transactionAdapter == null) throw new NotSupportedException("Transactions are not supported with current adapter.");
+            if (transactionAdapter == null)
+                throw new NotSupportedException("Transactions are not supported with current adapter.");
 
             foreach (var row in list)
             {
                 IDictionary<string, object> result;
                 try
                 {
-                    var key = GetKey(tableName, row);
-                    var criteria = ExpressionHelper.CriteriaDictionaryToExpression(tableName, key);
+                    IDictionary<string, object> key = GetKey(tableName, row);
+                    SimpleExpression criteria = ExpressionHelper.CriteriaDictionaryToExpression(tableName, key);
                     if (transactionAdapter.Find(tableName, criteria, transaction).Any())
                     {
-                        var record = row.Except(key).ToDictionary();
+                        IDictionary<string, object> record = row.Except(key).ToDictionary();
                         transactionAdapter.Update(tableName, record, criteria, transaction);
-                        result = isResultRequired ? transactionAdapter.Find(tableName, criteria, transaction).FirstOrDefault() : null;
+                        result = isResultRequired
+                                     ? transactionAdapter.Find(tableName, criteria, transaction).FirstOrDefault()
+                                     : null;
                     }
                     else
                     {

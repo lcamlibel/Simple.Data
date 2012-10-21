@@ -2,14 +2,10 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
-using System.Linq;
-using System.Text;
 using Simple.Data.Commands;
 
 namespace Simple.Data
 {
-    using System.Reflection;
-
     /// <summary>
     /// This class supports the Simple.Data framework internally and should not be used in your code.
     /// </summary>
@@ -17,12 +13,30 @@ namespace Simple.Data
     {
         private readonly ConcurrentDictionary<string, dynamic> _members = new ConcurrentDictionary<string, dynamic>();
 
-        protected DataStrategy() {}
+        protected DataStrategy()
+        {
+        }
 
         protected DataStrategy(DataStrategy copy)
         {
             _members = copy._members;
         }
+
+        public dynamic this[string name]
+        {
+            get { return GetOrAddDynamicReference(name); }
+        }
+
+        internal abstract RunStrategy Run { get; }
+
+        #region ICloneable Members
+
+        object ICloneable.Clone()
+        {
+            return Clone();
+        }
+
+        #endregion
 
         public abstract Adapter GetAdapter();
 
@@ -75,11 +89,6 @@ namespace Simple.Data
             return base.TryInvokeMember(binder, args, out result);
         }
 
-        public dynamic this[string name]
-        {
-            get { return GetOrAddDynamicReference(name); }
-        }
-
         private ObjectReference CreateDynamicReference(string name)
         {
             return new ObjectReference(name, this);
@@ -120,20 +129,13 @@ namespace Simple.Data
             return GetAdapter().IsExpressionFunction(name, args);
         }
 
-        internal abstract RunStrategy Run { get; }
-
-        object ICloneable.Clone()
-        {
-            return Clone();
-        }
-
         protected internal abstract DataStrategy Clone();
 
         public dynamic WithOptions(OptionsBase options)
         {
             return new DataStrategyWithOptions(this, options);
         }
-        
+
         public virtual dynamic ClearOptions()
         {
             return this;

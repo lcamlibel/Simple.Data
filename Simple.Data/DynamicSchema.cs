@@ -1,18 +1,13 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
 using System.Dynamic;
-using System.Linq;
-using System.Text;
+using Simple.Data.Commands;
 
 namespace Simple.Data
 {
-    using Commands;
-
     public class DynamicSchema : DynamicObject
     {
-        private readonly string _name;
         private readonly DataStrategy _dataStrategy;
+        private readonly string _name;
 
         private readonly ConcurrentDictionary<string, dynamic> _tables = new ConcurrentDictionary<string, dynamic>();
 
@@ -20,6 +15,11 @@ namespace Simple.Data
         {
             _name = name;
             _dataStrategy = dataStrategy;
+        }
+
+        public DynamicTable this[string name]
+        {
+            get { return GetTable(name); }
         }
 
         /// <summary>
@@ -38,18 +38,15 @@ namespace Simple.Data
         public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
         {
             var adapterWithFunctions = _dataStrategy.GetAdapter() as IAdapterWithFunctions;
-            if (adapterWithFunctions != null && adapterWithFunctions.IsValidFunction(string.Format("{0}.{1}", _name, binder.Name)))
+            if (adapterWithFunctions != null &&
+                adapterWithFunctions.IsValidFunction(string.Format("{0}.{1}", _name, binder.Name)))
             {
-                var command = new ExecuteFunctionCommand(_dataStrategy.GetDatabase(), adapterWithFunctions, string.Format("{0}.{1}", _name, binder.Name),
+                var command = new ExecuteFunctionCommand(_dataStrategy.GetDatabase(), adapterWithFunctions,
+                                                         string.Format("{0}.{1}", _name, binder.Name),
                                                          binder.ArgumentsToDictionary(args));
                 return command.Execute(out result);
             }
             return base.TryInvokeMember(binder, args, out result);
-        }
-
-        public DynamicTable this[string name]
-        {
-            get { return GetTable(name); }
         }
 
         internal DynamicTable GetTable(string name)

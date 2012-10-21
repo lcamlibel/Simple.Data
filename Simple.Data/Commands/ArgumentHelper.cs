@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
-using System.Text;
+using Simple.Data.Extensions;
 
 namespace Simple.Data.Commands
 {
-    using System.Dynamic;
-    using Extensions;
-
     internal static class ArgumentHelper
     {
         internal static void CheckFindArgs(object[] args, InvokeMemberBinder binder)
@@ -20,7 +18,9 @@ namespace Simple.Data.Commands
             }
         }
 
-        internal static IEnumerable<KeyValuePair<string, object>> CreateCriteriaDictionary(InvokeMemberBinder binder, IList<object> args, params string[] exactNames)
+        internal static IEnumerable<KeyValuePair<string, object>> CreateCriteriaDictionary(InvokeMemberBinder binder,
+                                                                                           IList<object> args,
+                                                                                           params string[] exactNames)
         {
             IDictionary<string, object> criteriaDictionary = null;
             if (exactNames.Contains(binder.Name))
@@ -31,7 +31,8 @@ namespace Simple.Data.Commands
                 }
                 else if (args.Count == 1)
                 {
-                    if (ReferenceEquals(args[0], null)) throw new ArgumentException("FindBy does not accept unnamed null argument.");
+                    if (ReferenceEquals(args[0], null))
+                        throw new ArgumentException("FindBy does not accept unnamed null argument.");
                     criteriaDictionary = args[0].ObjectToDictionary();
                 }
             }
@@ -42,7 +43,8 @@ namespace Simple.Data.Commands
 
             if (criteriaDictionary == null || criteriaDictionary.Count == 0)
             {
-                throw new ArgumentException(binder.Name + " requires an equal number of column names and values to filter data by.");
+                throw new ArgumentException(binder.Name +
+                                            " requires an equal number of column names and values to filter data by.");
             }
             return criteriaDictionary;
         }

@@ -6,14 +6,11 @@ using Simple.Data.Ado.Schema;
 
 namespace Simple.Data.Ado
 {
-    using System.Diagnostics;
-    using Extensions;
-
     internal class UpdateHelper
     {
-        private readonly DatabaseSchema _schema;
         private readonly ICommandBuilder _commandBuilder;
         private readonly IExpressionFormatter _expressionFormatter;
+        private readonly DatabaseSchema _schema;
 
         public UpdateHelper(DatabaseSchema schema)
         {
@@ -22,14 +19,15 @@ namespace Simple.Data.Ado
             _expressionFormatter = new ExpressionFormatter(_commandBuilder, _schema);
         }
 
-        public ICommandBuilder GetUpdateCommand(string tableName, IDictionary<string, object> data, SimpleExpression criteria)
+        public ICommandBuilder GetUpdateCommand(string tableName, IDictionary<string, object> data,
+                                                SimpleExpression criteria)
         {
-            var table = _schema.FindTable(tableName);
-            var updateClause = GetUpdateClause(table, data);
+            Table table = _schema.FindTable(tableName);
+            string updateClause = GetUpdateClause(table, data);
             if (string.IsNullOrWhiteSpace(updateClause)) throw new InvalidOperationException("No columns to update.");
             _commandBuilder.Append(updateClause);
 
-            if (criteria != null )
+            if (criteria != null)
             {
                 string whereStatement = null;
                 if (criteria.GetOperandsOfType<ObjectReference>().Any(o => IsTableChain(tableName, o)))
@@ -48,7 +46,7 @@ namespace Simple.Data.Ado
                     whereStatement = _expressionFormatter.Format(criteria);
                 }
                 if (!string.IsNullOrEmpty(whereStatement))
-                  _commandBuilder.Append(" where " + whereStatement);
+                    _commandBuilder.Append(" where " + whereStatement);
             }
 
             return _commandBuilder;
@@ -56,14 +54,15 @@ namespace Simple.Data.Ado
 
         private bool IsTableChain(string tableName, ObjectReference o)
         {
-            var ownerName = tableName.Contains(".") ? o.GetOwner().GetAllObjectNamesDotted() : o.GetOwner().GetName();
-            return (!ownerName.Equals(tableName, StringComparison.InvariantCultureIgnoreCase)) && _schema.IsTable(ownerName);
+            string ownerName = tableName.Contains(".") ? o.GetOwner().GetAllObjectNamesDotted() : o.GetOwner().GetName();
+            return (!ownerName.Equals(tableName, StringComparison.InvariantCultureIgnoreCase)) &&
+                   _schema.IsTable(ownerName);
         }
 
         private string CreateWhereInStatement(SimpleExpression criteria, Table table)
         {
             var inClauseBuilder = new CommandBuilder(_schema);
-            var keyColumn = table.FindColumn(table.PrimaryKey[0]);
+            Column keyColumn = table.FindColumn(table.PrimaryKey[0]);
             inClauseBuilder.Append(string.Format("SELECT {0} FROM {1}",
                                                  keyColumn.QualifiedName, table.QualifiedName));
             inClauseBuilder.Append(" ");
@@ -83,12 +82,12 @@ namespace Simple.Data.Ado
                                                    new ObjectName(table.Schema, table.ActualName), criteria)));
             inClauseBuilder.Append(" where ");
             inClauseBuilder.Append(_expressionFormatter.Format(criteria));
-            var updateJoin = _schema.QuoteObjectName("_updatejoin");
+            string updateJoin = _schema.QuoteObjectName("_updatejoin");
             var whereClause = new StringBuilder(string.Format("SELECT 1 FROM {0} [_updatejoin] ", table.QualifiedName));
             whereClause.Append(inClauseBuilder.Text.Replace(table.QualifiedName, updateJoin));
             whereClause.Append(" AND (");
             bool appendAnd = false;
-            foreach (var column in table.PrimaryKey.AsEnumerable().Select(table.FindColumn))
+            foreach (Column column in table.PrimaryKey.AsEnumerable().Select(table.FindColumn))
             {
                 if (appendAnd) whereClause.Append(" AND ");
                 whereClause.AppendFormat("{0}.{1} = {2}", updateJoin, column.QuotedName, column.QualifiedName);
@@ -100,26 +99,18 @@ namespace Simple.Data.Ado
 
         private string GetUpdateClause(Table table, IEnumerable<KeyValuePair<string, object>> data)
         {
-            var setClause = string.Join(", ",
-                data.Where(kvp => table.HasColumn(kvp.Key) && table.FindColumn(kvp.Key).IsWriteable)
-                .Select(kvp => CreateColumnUpdateClause(kvp.Key, kvp.Value, table)));
+            string setClause = string.Join(", ",
+                                           data.Where(
+                                               kvp => table.HasColumn(kvp.Key) && table.FindColumn(kvp.Key).IsWriteable)
+                                               .Select(kvp => CreateColumnUpdateClause(kvp.Key, kvp.Value, table)));
             return string.Format("update {0} set {1}", table.QualifiedName, setClause);
         }
 
         private string CreateColumnUpdateClause(string columnName, object value, Table table)
         {
-            var column = table.FindColumn(columnName);
+            Column column = table.FindColumn(columnName);
             var mathReference = value as SimpleReference;
-            string rightOperand;
-            if (ReferenceEquals(mathReference, null))
-            {
-                rightOperand = _commandBuilder.AddParameter(value, column).Name;
-            }
-            else
-            {
-                rightOperand =
-                    new SimpleReferenceFormatter(_schema, _commandBuilder).FormatColumnClauseWithoutAlias(mathReference);
-            }
+            string rightOperand = ReferenceEquals(mathReference, null) ? _commandBuilder.AddParameter(value, column).Name : new SimpleReferenceFormatter(_schema, _commandBuilder).FormatColumnClauseWithoutAlias(mathReference);
 
 
             return string.Format("{0} = {1}", column.QuotedName, rightOperand);

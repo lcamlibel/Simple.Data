@@ -12,7 +12,8 @@ namespace Simple.Data.SqlServer
         {
         }
 
-        public override bool TryGetProvider(string connectionString, out IConnectionProvider provider, out Exception exception)
+        public override bool TryGetProvider(string connectionString, out IConnectionProvider provider,
+                                            out Exception exception)
         {
             try
             {

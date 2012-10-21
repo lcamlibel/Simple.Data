@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
-using System.Text;
+using System.Reflection;
 
 namespace Simple.Data
 {
-    using System.Dynamic;
-    using System.Reflection;
-
     internal class AdapterMethodDynamicInvoker
     {
         private readonly Adapter _adapter;
@@ -19,12 +17,13 @@ namespace Simple.Data
 
         public bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
         {
-            var adapterMethods = _adapter.GetType().GetMethods().Where(m => m.Name == binder.Name).ToList();
+            List<MethodInfo> adapterMethods = _adapter.GetType().GetMethods().Where(m => m.Name == binder.Name).ToList();
 
-            foreach (var method in adapterMethods)
+            foreach (MethodInfo method in adapterMethods)
             {
-                var parameters = method.GetParameters().ToArray();
-                if (parameters.Any(p => p.RawDefaultValue != DBNull.Value) && binder.CallInfo.ArgumentNames.Any(s => !string.IsNullOrWhiteSpace(s)))
+                ParameterInfo[] parameters = method.GetParameters().ToArray();
+                if (parameters.Any(p => p.RawDefaultValue != DBNull.Value) &&
+                    binder.CallInfo.ArgumentNames.Any(s => !string.IsNullOrWhiteSpace(s)))
                 {
                     if (TryInvokeMemberWithNamedParameters(binder, args, out result, method, parameters))
                     {
@@ -57,7 +56,7 @@ namespace Simple.Data
                 }
                 else
                 {
-                    var index = binder.CallInfo.ArgumentNames.IndexOf(parameters[i].Name);
+                    int index = binder.CallInfo.ArgumentNames.IndexOf(parameters[i].Name);
                     if (index > -1)
                     {
                         if (!parameters[i].ParameterType.IsInstanceOfType(args[index]))

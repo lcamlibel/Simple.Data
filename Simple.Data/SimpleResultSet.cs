@@ -3,8 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
 
 namespace Simple.Data
 {
@@ -12,17 +10,16 @@ namespace Simple.Data
     {
         public static readonly SimpleResultSet Empty = new SimpleResultSet();
 
-        private readonly IEnumerable<IEnumerable<dynamic>> _sources;
         private readonly IEnumerator<IEnumerable<dynamic>> _sourceEnumerator;
+        private readonly IEnumerable<IEnumerable<dynamic>> _sources;
         private bool _hasCurrent;
         private IDictionary<string, object> _outputValues;
 
         private SimpleResultSet() : this(Enumerable.Empty<IEnumerable<dynamic>>())
         {
-            
         }
 
-        public SimpleResultSet(params IEnumerable<dynamic>[] sources) : this (sources.AsEnumerable())
+        public SimpleResultSet(params IEnumerable<dynamic>[] sources) : this(sources.AsEnumerable())
         {
         }
 
@@ -40,8 +37,29 @@ namespace Simple.Data
 
         public object ReturnValue
         {
-            get { return (_outputValues != null && _outputValues.ContainsKey("__ReturnValue")) ? _outputValues["__ReturnValue"] : 0; }
+            get
+            {
+                return (_outputValues != null && _outputValues.ContainsKey("__ReturnValue"))
+                           ? _outputValues["__ReturnValue"]
+                           : 0;
+            }
         }
+
+        #region IEnumerable Members
+
+        /// <summary>
+        /// Returns an enumerator that iterates through the collection.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="T:System.Collections.IEnumerator"/> that can be used to iterate through the collection.
+        /// </returns>
+        /// <filterpriority>1</filterpriority>
+        public IEnumerator GetEnumerator()
+        {
+            return new DynamicEnumerator(_sourceEnumerator.Current);
+        }
+
+        #endregion
 
         public bool NextResult()
         {
@@ -50,12 +68,12 @@ namespace Simple.Data
 
         public IEnumerable<T> Cast<T>()
         {
-			return new CastEnumerable<T>(_sourceEnumerator.Current);
+            return new CastEnumerable<T>(_sourceEnumerator.Current);
         }
 
         public IEnumerable<T> OfType<T>()
         {
-			return new OfTypeEnumerable<T>(_sourceEnumerator.Current);
+            return new OfTypeEnumerable<T>(_sourceEnumerator.Current);
         }
 
         public IList<dynamic> ToList()
@@ -100,7 +118,9 @@ namespace Simple.Data
 
         private IEnumerable<dynamic> ToScalarEnumerable()
         {
-            return _sourceEnumerator.Current.OfType<IDictionary<string, object>>().Select(dict => dict.Values.FirstOrDefault());
+            return
+                _sourceEnumerator.Current.OfType<IDictionary<string, object>>().Select(
+                    dict => dict.Values.FirstOrDefault());
         }
 
         public dynamic First()
@@ -123,12 +143,12 @@ namespace Simple.Data
             return Cast<T>().FirstOrDefault();
         }
 
-        public T First<T>(Func<T,bool> predicate)
+        public T First<T>(Func<T, bool> predicate)
         {
             return Cast<T>().First(predicate);
         }
 
-        public T FirstOrDefault<T>(Func<T,bool> predicate)
+        public T FirstOrDefault<T>(Func<T, bool> predicate)
         {
             return Cast<T>().FirstOrDefault(predicate);
         }
@@ -193,21 +213,9 @@ namespace Simple.Data
             return Cast<T>().SingleOrDefault(predicate);
         }
 
-        /// <summary>
-        /// Returns an enumerator that iterates through the collection.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="T:System.Collections.IEnumerator"/> that can be used to iterate through the collection.
-        /// </returns>
-        /// <filterpriority>1</filterpriority>
-        public IEnumerator GetEnumerator()
-        {
-            return new DynamicEnumerator(_sourceEnumerator.Current);
-        }
-
         public override bool TryConvert(ConvertBinder binder, out object result)
         {
-            if (binder.Type == typeof(IEnumerable<object>))
+            if (binder.Type == typeof (IEnumerable<object>))
             {
                 result = Cast<object>();
                 return true;
@@ -218,11 +226,57 @@ namespace Simple.Data
                 if (ConcreteCollectionTypeCreator.TryCreate(binder.Type, this, out result))
                     return true;
             }
-            
+
             return base.TryConvert(binder, out result);
         }
 
-        class DynamicEnumerator : IEnumerator, IDisposable
+        /// <summary>
+        /// Creates a single-set <see cref="SimpleResultSet"/> from the specified source.
+        /// </summary>
+        /// <param name="source">The source.</param>
+        public static SimpleResultSet Create(IEnumerable<IDictionary<string, object>> source)
+        {
+            IEnumerable<SimpleRecord> q = from dict in source
+                                          select new SimpleRecord(dict);
+            return new SimpleResultSet(q);
+        }
+
+        /// <summary>
+        /// Creates a single-set <see cref="SimpleResultSet"/> from the specified source.
+        /// </summary>
+        /// <param name="source">The source.</param>
+        /// <param name="tableName"></param> 
+        /// <param name="dataStrategy"></param> 
+        public static SimpleResultSet Create(IEnumerable<IDictionary<string, object>> source, string tableName,
+                                             DataStrategy dataStrategy)
+        {
+            IEnumerable<SimpleRecord> q = from dict in source
+                                          where dict != null
+                                          select new SimpleRecord(dict, tableName, dataStrategy);
+            return new SimpleResultSet(q);
+        }
+
+        /// <summary>
+        /// Creates a multi-set <see cref="SimpleResultSet"/> from the specified sources.
+        /// </summary>
+        /// <param name="sources">The sources.</param>
+        /// <returns></returns>
+        public static SimpleResultSet Create(IEnumerable<IEnumerable<IDictionary<string, object>>> sources)
+        {
+            IEnumerable<IEnumerable<SimpleRecord>> q = from source in sources
+                                                       select from dict in source
+                                                              select new SimpleRecord(dict);
+            return new SimpleResultSet(q);
+        }
+
+        internal void SetOutputValues(IDictionary<string, object> outputValues)
+        {
+            _outputValues = outputValues;
+        }
+
+        #region Nested type: DynamicEnumerator
+
+        private class DynamicEnumerator : IEnumerator, IDisposable
         {
             private readonly IEnumerator<dynamic> _enumerator;
 
@@ -230,6 +284,8 @@ namespace Simple.Data
             {
                 _enumerator = source.GetEnumerator();
             }
+
+            #region IDisposable Members
 
             /// <summary>
             /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
@@ -239,6 +295,10 @@ namespace Simple.Data
             {
                 _enumerator.Dispose();
             }
+
+            #endregion
+
+            #region IEnumerator Members
 
             /// <summary>
             /// Advances the enumerator to the next element of the collection.
@@ -272,47 +332,10 @@ namespace Simple.Data
             {
                 get { return _enumerator.Current; }
             }
+
+            #endregion
         }
 
-        /// <summary>
-        /// Creates a single-set <see cref="SimpleResultSet"/> from the specified source.
-        /// </summary>
-        /// <param name="source">The source.</param>
-        public static SimpleResultSet Create(IEnumerable<IDictionary<string,object>> source)
-        {
-            var q = from dict in source
-                    select new SimpleRecord(dict);
-            return new SimpleResultSet(q);
-        }
-
-        /// <summary>
-        /// Creates a single-set <see cref="SimpleResultSet"/> from the specified source.
-        /// </summary>
-        /// <param name="source">The source.</param>
-        public static SimpleResultSet Create(IEnumerable<IDictionary<string, object>> source, string tableName, DataStrategy dataStrategy)
-        {
-            var q = from dict in source
-                    where dict != null
-                    select new SimpleRecord(dict, tableName, dataStrategy);
-            return new SimpleResultSet(q);
-        }
-
-        /// <summary>
-        /// Creates a multi-set <see cref="SimpleResultSet"/> from the specified sources.
-        /// </summary>
-        /// <param name="sources">The sources.</param>
-        /// <returns></returns>
-        public static SimpleResultSet Create(IEnumerable<IEnumerable<IDictionary<string, object>>> sources)
-        {
-            var q = from source in sources
-                    select from dict in source
-                    select new SimpleRecord(dict);
-            return new SimpleResultSet(q);
-        }
-
-        internal void SetOutputValues(IDictionary<string,object> outputValues)
-        {
-            _outputValues = outputValues;
-        }
+        #endregion
     }
 }

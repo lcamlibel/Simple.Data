@@ -1,21 +1,22 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Diagnostics;
+using System.Linq;
+using Simple.Data.Ado.Schema;
+
 namespace Simple.Data.Ado
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Data;
-    using System.Diagnostics;
-    using System.Linq;
-    using Schema;
-
-    class BulkInserterHelper
+    internal class BulkInserterHelper
     {
         protected readonly AdoAdapter Adapter;
         protected readonly IEnumerable<IDictionary<string, object>> Data;
-        private readonly Table _table;
         private readonly List<Column> _columns;
+        private readonly Table _table;
         private Action<IDictionary<string, object>, IDbCommand> _parameterSetter;
 
-        public BulkInserterHelper(AdoAdapter adapter, IEnumerable<IDictionary<string, object>> data, Table table, List<Column> columns)
+        public BulkInserterHelper(AdoAdapter adapter, IEnumerable<IDictionary<string, object>> data, Table table,
+                                  List<Column> columns)
         {
             Adapter = adapter;
             Data = data;
@@ -23,12 +24,14 @@ namespace Simple.Data.Ado
             _columns = columns;
         }
 
-        public virtual void InsertRowsWithoutFetchBack(string insertSql, Func<IDictionary<string, object>, Exception, bool> onError)
+        public virtual void InsertRowsWithoutFetchBack(string insertSql,
+                                                       Func<IDictionary<string, object>, Exception, bool> onError)
         {
-            var connection = Adapter.CreateConnection();
+            IDbConnection connection = Adapter.CreateConnection();
             using (connection.MaybeDisposable())
             {
-                using (var insertCommand = new CommandHelper(Adapter).CreateInsert(connection, insertSql, _columns))
+                using (
+                    IDbCommand insertCommand = new CommandHelper(Adapter).CreateInsert(connection, insertSql, _columns))
                 {
                     connection.OpenIfClosed();
                     TryPrepare(insertCommand);
@@ -40,30 +43,47 @@ namespace Simple.Data.Ado
             }
         }
 
-        public virtual IEnumerable<IDictionary<string, object>> InsertRowsWithSeparateStatements(string insertSql, string selectSql, Func<IDictionary<string, object>, Exception, bool> onError)
+        public virtual IEnumerable<IDictionary<string, object>> InsertRowsWithSeparateStatements(string insertSql,
+                                                                                                 string selectSql,
+                                                                                                 Func
+                                                                                                     <
+                                                                                                     IDictionary
+                                                                                                     <string, object>,
+                                                                                                     Exception, bool>
+                                                                                                     onError)
         {
-            var connection = Adapter.CreateConnection();
+            IDbConnection connection = Adapter.CreateConnection();
             using (connection.MaybeDisposable())
             {
-                using (var insertCommand = new CommandHelper(Adapter).CreateInsert(connection, insertSql, _columns))
-                using (var selectCommand = connection.CreateCommand(Adapter.AdoOptions))
+                using (
+                    IDbCommand insertCommand = new CommandHelper(Adapter).CreateInsert(connection, insertSql, _columns))
+                using (IDbCommand selectCommand = connection.CreateCommand(Adapter.AdoOptions))
                 {
                     selectCommand.CommandText = selectSql;
                     connection.OpenIfClosed();
                     TryPrepare(insertCommand, selectCommand);
-                    return Data.Select(row => InsertRow(row, insertCommand, selectCommand, onError)).Where(r => r != null).ToList();
+                    return
+                        Data.Select(row => InsertRow(row, insertCommand, selectCommand, onError)).Where(r => r != null).
+                            ToList();
                 }
             }
         }
 
-        public virtual IEnumerable<IDictionary<string, object>> InsertRowsWithCompoundStatement(string insertSql, string selectSql, Func<IDictionary<string, object>, Exception, bool> onError)
+        public virtual IEnumerable<IDictionary<string, object>> InsertRowsWithCompoundStatement(string insertSql,
+                                                                                                string selectSql,
+                                                                                                Func
+                                                                                                    <
+                                                                                                    IDictionary
+                                                                                                    <string, object>,
+                                                                                                    Exception, bool>
+                                                                                                    onError)
         {
             insertSql += "; " + selectSql;
 
-            var connection = Adapter.CreateConnection();
+            IDbConnection connection = Adapter.CreateConnection();
             using (connection.MaybeDisposable())
             {
-                using (var command = new CommandHelper(Adapter).CreateInsert(connection, insertSql, _columns))
+                using (IDbCommand command = new CommandHelper(Adapter).CreateInsert(connection, insertSql, _columns))
                 {
                     connection.OpenIfClosed();
                     TryPrepare(command);
@@ -72,14 +92,16 @@ namespace Simple.Data.Ado
             }
         }
 
-        protected IDictionary<string, object> InsertRowAndSelect(IDictionary<string, object> row, IDbCommand command, Func<IDictionary<string,object>, Exception, bool> onError)
+        protected IDictionary<string, object> InsertRowAndSelect(IDictionary<string, object> row, IDbCommand command,
+                                                                 Func<IDictionary<string, object>, Exception, bool>
+                                                                     onError)
         {
             if (_parameterSetter == null) _parameterSetter = BuildParameterSettingAction(row);
             _parameterSetter(row, command);
 
             try
             {
-                var insertedRow = TryExecuteSingletonQuery(command);
+                IDictionary<string, object> insertedRow = TryExecuteSingletonQuery(command);
                 return insertedRow;
             }
             catch (Exception ex)
@@ -89,7 +111,8 @@ namespace Simple.Data.Ado
             }
         }
 
-        protected int InsertRow(IDictionary<string, object> row, IDbCommand command, Func<IDictionary<string, object>, Exception, bool> onError)
+        protected int InsertRow(IDictionary<string, object> row, IDbCommand command,
+                                Func<IDictionary<string, object>, Exception, bool> onError)
         {
             if (_parameterSetter == null) _parameterSetter = BuildParameterSettingAction(row);
             _parameterSetter(row, command);
@@ -105,7 +128,9 @@ namespace Simple.Data.Ado
             }
         }
 
-        protected IDictionary<string, object> InsertRow(IDictionary<string, object> row, IDbCommand insertCommand, IDbCommand selectCommand, Func<IDictionary<string, object>, Exception, bool> onError)
+        protected IDictionary<string, object> InsertRow(IDictionary<string, object> row, IDbCommand insertCommand,
+                                                        IDbCommand selectCommand,
+                                                        Func<IDictionary<string, object>, Exception, bool> onError)
         {
             if (_parameterSetter == null) _parameterSetter = BuildParameterSettingAction(row);
             _parameterSetter(row, insertCommand);
@@ -125,7 +150,7 @@ namespace Simple.Data.Ado
 
         private static IDictionary<string, object> TryExecuteSingletonQuery(IDbCommand command)
         {
-            using (var reader = command.TryExecuteReader())
+            using (IDataReader reader = command.TryExecuteReader())
             {
                 if (reader.Read())
                 {
@@ -138,7 +163,7 @@ namespace Simple.Data.Ado
 
         private static void TryPrepare(params IDbCommand[] commands)
         {
-            foreach (var command in commands)
+            foreach (IDbCommand command in commands)
             {
                 try
                 {
@@ -151,14 +176,19 @@ namespace Simple.Data.Ado
             }
         }
 
-        private Action<IDictionary<string,object>, IDbCommand> BuildParameterSettingAction(IDictionary<string,object> sample)
+        private Action<IDictionary<string, object>, IDbCommand> BuildParameterSettingAction(
+            IDictionary<string, object> sample)
         {
-            var actions =
-                _columns.Select<Column, Action<IDictionary<string,object>, IDbCommand>>((c, i) => (row, cmd) => cmd.SetParameterValue(i, null)).ToArray();
+            Action<IDictionary<string, object>, IDbCommand>[] actions =
+                _columns.Select<Column, Action<IDictionary<string, object>, IDbCommand>>(
+                    (c, i) => (row, cmd) => cmd.SetParameterValue(i, null)).ToArray();
 
-            var usedColumnNames = sample.Keys.Where(k => _columns.Any(c => String.Equals(c.ActualName, k, StringComparison.InvariantCultureIgnoreCase))).ToArray();
+            string[] usedColumnNames =
+                sample.Keys.Where(
+                    k => _columns.Any(c => String.Equals(c.ActualName, k, StringComparison.InvariantCultureIgnoreCase)))
+                    .ToArray();
 
-            foreach (var columnName in usedColumnNames)
+            foreach (string columnName in usedColumnNames)
             {
                 int index = _columns.IndexOf(_table.FindColumn(columnName));
                 if (index >= 0)
@@ -167,7 +197,7 @@ namespace Simple.Data.Ado
                 ++index;
             }
 
-            return actions.Aggregate((working, next) => working + next) ?? ((row,cmd) => { });
+            return actions.Aggregate((working, next) => working + next) ?? ((row, cmd) => { });
         }
 
         private Action<IDictionary<string, object>, IDbCommand> BuildIndividualFunction(string key, int index)

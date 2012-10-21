@@ -2,18 +2,16 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
 using Simple.Data.Extensions;
 
 namespace Simple.Data.Ado.Schema
 {
-    class ProcedureCollection : Collection<Procedure>
+    internal class ProcedureCollection : Collection<Procedure>
     {
         private readonly string _defaultSchema;
 
         public ProcedureCollection()
         {
-            
         }
 
         public ProcedureCollection(IEnumerable<Procedure> procedures, string defaultSchema) : base(procedures.ToList())
@@ -29,11 +27,12 @@ namespace Simple.Data.Ado.Schema
         /// <returns>A <see cref="Procedure"/> if a match is found; otherwise, <c>null</c>.</returns>
         public Procedure Find(string procedureName)
         {
-            var procedure = FindImpl(procedureName);
+            Procedure procedure = FindImpl(procedureName);
 
             if (procedure == null)
             {
-                throw new UnresolvableObjectException(procedureName, "No matching procedure found, or insufficient permissions.");
+                throw new UnresolvableObjectException(procedureName,
+                                                      "No matching procedure found, or insufficient permissions.");
             }
 
             return procedure;
@@ -55,8 +54,9 @@ namespace Simple.Data.Ado.Schema
         {
             if (procedureName.Contains('.'))
             {
-                var schemaDotprocedure = procedureName.Split('.');
-                if (schemaDotprocedure.Length != 2) throw new InvalidOperationException("Could not resolve qualified procedure name.");
+                string[] schemaDotprocedure = procedureName.Split('.');
+                if (schemaDotprocedure.Length != 2)
+                    throw new InvalidOperationException("Could not resolve qualified procedure name.");
                 return Find(schemaDotprocedure[1], schemaDotprocedure[0]);
             }
             if (!string.IsNullOrWhiteSpace(_defaultSchema))
@@ -77,13 +77,14 @@ namespace Simple.Data.Ado.Schema
         /// <returns>A <see cref="Procedure"/> if a match is found; otherwise, <c>null</c>.</returns>
         public Procedure Find(string procedureName, string schemaName)
         {
-            var procedure = FindprocedureWithName(procedureName.Homogenize(), schemaName.Homogenize())
-                   ?? FindprocedureWithPluralName(procedureName.Homogenize(), schemaName.Homogenize())
-                   ?? FindprocedureWithSingularName(procedureName.Homogenize(), schemaName.Homogenize());
+            Procedure procedure = FindprocedureWithName(procedureName.Homogenize(), schemaName.Homogenize())
+                                  ?? FindprocedureWithPluralName(procedureName.Homogenize(), schemaName.Homogenize())
+                                  ?? FindprocedureWithSingularName(procedureName.Homogenize(), schemaName.Homogenize());
 
             if (procedure == null)
             {
-                throw new UnresolvableObjectException(schemaName + '.' + procedureName, "No matching procedure found, or insufficient permissions.");
+                throw new UnresolvableObjectException(schemaName + '.' + procedureName,
+                                                      "No matching procedure found, or insufficient permissions.");
             }
 
             return procedure;
@@ -101,7 +102,11 @@ namespace Simple.Data.Ado.Schema
 
         private Procedure FindprocedureWithName(string procedureName, string schemaName)
         {
-            return this.SingleOrDefault(sp => sp.HomogenizedName.Equals(procedureName) && (sp.Schema == null || sp.Schema.Homogenize().Equals(schemaName)));
+            return
+                this.SingleOrDefault(
+                    sp =>
+                    sp.HomogenizedName.Equals(procedureName) &&
+                    (sp.Schema == null || sp.Schema.Homogenize().Equals(schemaName)));
         }
 
         private Procedure FindprocedureWithName(string procedureName)

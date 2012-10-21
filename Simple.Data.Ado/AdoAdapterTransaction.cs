@@ -1,20 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Data.Common;
-using System.Linq;
-using System.Text;
+﻿using System.Data;
 
 namespace Simple.Data.Ado
 {
-    class AdoAdapterTransaction : IAdapterTransaction
+    internal class AdoAdapterTransaction : IAdapterTransaction
     {
-        private readonly string _name;
-        private readonly IDbTransaction _dbTransaction;
         private readonly IDbConnection _dbConnection;
+        private readonly IDbTransaction _dbTransaction;
+        private readonly string _name;
         private readonly bool _sharedConnection;
 
-        public AdoAdapterTransaction(IDbTransaction dbTransaction, bool sharedConnection = false) : this(dbTransaction, null, sharedConnection)
+        public AdoAdapterTransaction(IDbTransaction dbTransaction, bool sharedConnection = false)
+            : this(dbTransaction, null, sharedConnection)
         {
         }
 
@@ -30,6 +26,8 @@ namespace Simple.Data.Ado
         {
             get { return _dbTransaction; }
         }
+
+        #region IAdapterTransaction Members
 
         public void Dispose()
         {
@@ -52,5 +50,7 @@ namespace Simple.Data.Ado
         {
             get { return _name; }
         }
+
+        #endregion
     }
 }

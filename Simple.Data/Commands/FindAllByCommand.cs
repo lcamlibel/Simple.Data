@@ -1,15 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Dynamic;
-using System.Linq;
 
 namespace Simple.Data.Commands
 {
-    class FindAllByCommand : ICommand
+    internal class FindAllByCommand : ICommand
     {
+        #region ICommand Members
+
         public bool IsCommandFor(string method)
         {
-            return method.StartsWith("FindAllBy") || method.StartsWith("find_all_by_", StringComparison.InvariantCultureIgnoreCase);
+            return method.StartsWith("FindAllBy") ||
+                   method.StartsWith("find_all_by_", StringComparison.InvariantCultureIgnoreCase);
         }
 
         public object Execute(DataStrategy dataStrategy, DynamicTable table, InvokeMemberBinder binder, object[] args)
@@ -19,10 +21,14 @@ namespace Simple.Data.Commands
                 ArgumentHelper.CheckFindArgs(args, binder);
             }
 
-            var criteriaDictionary = ArgumentHelper.CreateCriteriaDictionary(binder, args, "FindAllBy", "find_all_by");
-            var criteriaExpression = ExpressionHelper.CriteriaDictionaryToExpression(table.GetQualifiedName(),
-                                                                                                  criteriaDictionary);
+            IEnumerable<KeyValuePair<string, object>> criteriaDictionary =
+                ArgumentHelper.CreateCriteriaDictionary(binder, args, "FindAllBy", "find_all_by");
+            SimpleExpression criteriaExpression =
+                ExpressionHelper.CriteriaDictionaryToExpression(table.GetQualifiedName(),
+                                                                criteriaDictionary);
             return new SimpleQuery(dataStrategy, table.GetQualifiedName()).Where(criteriaExpression);
         }
+
+        #endregion
     }
 }

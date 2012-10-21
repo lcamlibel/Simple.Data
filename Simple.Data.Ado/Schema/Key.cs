@@ -6,6 +6,7 @@ namespace Simple.Data.Ado.Schema
     public sealed class Key
     {
         private readonly string[] _columns;
+
         public Key(IEnumerable<string> columns)
         {
             _columns = columns.ToArray();

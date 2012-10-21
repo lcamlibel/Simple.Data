@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
 using Simple.Data.Extensions;
 
 namespace Simple.Data.Ado.Schema
@@ -10,10 +8,10 @@ namespace Simple.Data.Ado.Schema
     public class Procedure
     {
         private readonly DatabaseSchema _databaseSchema;
-        private readonly string _name;
-        private readonly string _specificName;
-        private readonly string _schema;
         private readonly Lazy<ParameterCollection> _lazyParameters;
+        private readonly string _name;
+        private readonly string _schema;
+        private readonly string _specificName;
 
         public Procedure(string name, string specificName, string schema)
         {
@@ -21,7 +19,7 @@ namespace Simple.Data.Ado.Schema
             _specificName = specificName;
             _schema = schema.NullIfWhitespace();
             _lazyParameters = new Lazy<ParameterCollection>(() => new ParameterCollection(GetParameters()));
-         }
+        }
 
         internal Procedure(string name, string specificName, string schema, DatabaseSchema databaseSchema)
         {
@@ -30,11 +28,6 @@ namespace Simple.Data.Ado.Schema
             _schema = schema.NullIfWhitespace();
             _lazyParameters = new Lazy<ParameterCollection>(() => new ParameterCollection(GetParameters()));
             _databaseSchema = databaseSchema;
-        }
-
-        private IEnumerable<Parameter> GetParameters()
-        {
-            return _databaseSchema.SchemaProvider.GetParameters(this);
         }
 
         public string SpecificName
@@ -74,7 +67,18 @@ namespace Simple.Data.Ado.Schema
 
         public string QualifiedName
         {
-            get { return string.IsNullOrWhiteSpace(_schema) ? QuotedName : string.Format("{0}.{1}", _databaseSchema.QuoteObjectName(_schema), _databaseSchema.QuoteObjectName(_name)); }
+            get
+            {
+                return string.IsNullOrWhiteSpace(_schema)
+                           ? QuotedName
+                           : string.Format("{0}.{1}", _databaseSchema.QuoteObjectName(_schema),
+                                           _databaseSchema.QuoteObjectName(_name));
+            }
+        }
+
+        private IEnumerable<Parameter> GetParameters()
+        {
+            return _databaseSchema.SchemaProvider.GetParameters(this);
         }
     }
 
@@ -82,7 +86,7 @@ namespace Simple.Data.Ado.Schema
     {
         public ParameterCollection(IEnumerable<Parameter> parameters)
         {
-            foreach (var parameter in parameters)
+            foreach (Parameter parameter in parameters)
             {
                 Add(parameter);
             }

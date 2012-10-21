@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Security;
-using System.Text;
 
 namespace Simple.Data
 {
@@ -29,7 +26,7 @@ namespace Simple.Data
 
         public static string GetSimpleDataAssemblyPath()
         {
-            var path = ThisAssembly.CodeBase.Replace("file:///", "").Replace("file://", "//");
+            string path = ThisAssembly.CodeBase.Replace("file:///", "").Replace("file://", "//");
             path = Path.GetDirectoryName(path);
             if (path == null) throw new ArgumentException("Unrecognised assemblyFile.");
             if (!Path.IsPathRooted(path))
@@ -53,7 +50,7 @@ namespace Simple.Data
                 assembly = null;
                 return false;
             }
-            catch(FileLoadException)
+            catch (FileLoadException)
             {
                 assembly = null;
                 return false;
@@ -63,7 +60,7 @@ namespace Simple.Data
                 assembly = null;
                 return false;
             }
-            catch(SecurityException)
+            catch (SecurityException)
             {
                 assembly = null;
                 return false;

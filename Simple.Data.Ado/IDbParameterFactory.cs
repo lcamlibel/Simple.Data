@@ -1,9 +1,8 @@
-﻿namespace Simple.Data.Ado
-{
-    using System;
-    using System.Data;
-    using Schema;
+﻿using System.Data;
+using Simple.Data.Ado.Schema;
 
+namespace Simple.Data.Ado
+{
     public interface IDbParameterFactory
     {
         IDbDataParameter CreateParameter(string name);

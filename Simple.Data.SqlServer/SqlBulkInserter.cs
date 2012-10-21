@@ -1,19 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
+using System.Data;
+using System.Data.SqlClient;
 using System.Linq;
-using System.Text;
+using Simple.Data.Ado;
+using Simple.Data.Ado.Schema;
 
 namespace Simple.Data.SqlServer
 {
-    using System.ComponentModel.Composition;
-    using System.Data;
-    using System.Data.SqlClient;
-    using Ado;
-
-    [Export(typeof(IBulkInserter))]
+    [Export(typeof (IBulkInserter))]
     public class SqlBulkInserter : IBulkInserter
     {
-        public IEnumerable<IDictionary<string, object>> Insert(AdoAdapter adapter, string tableName, IEnumerable<IDictionary<string, object>> data, IDbTransaction transaction, Func<IDictionary<string, object>, Exception, bool> onError, bool resultRequired)
+        #region IBulkInserter Members
+
+        public IEnumerable<IDictionary<string, object>> Insert(AdoAdapter adapter, string tableName,
+                                                               IEnumerable<IDictionary<string, object>> data,
+                                                               IDbTransaction transaction,
+                                                               Func<IDictionary<string, object>, Exception, bool>
+                                                                   onError, bool resultRequired)
         {
             if (resultRequired)
             {
@@ -29,7 +34,7 @@ namespace Simple.Data.SqlServer
             if (transaction != null)
             {
                 connection = (SqlConnection) transaction.Connection;
-                bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, (SqlTransaction)transaction);
+                bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, (SqlTransaction) transaction);
             }
             else
             {
@@ -67,16 +72,19 @@ namespace Simple.Data.SqlServer
             return null;
         }
 
-        private DataTable CreateDataTable(AdoAdapter adapter, string tableName, ICollection<string> keys, SqlBulkCopy bulkCopy)
+        #endregion
+
+        private DataTable CreateDataTable(AdoAdapter adapter, string tableName, IEnumerable<string> keys,
+                                          SqlBulkCopy bulkCopy)
         {
-            var table = adapter.GetSchema().FindTable(tableName);
+            Table table = adapter.GetSchema().FindTable(tableName);
             var dataTable = new DataTable(table.ActualName);
 
-            foreach (var key in keys)
+            foreach (string key in keys)
             {
                 if (table.HasColumn(key))
                 {
-                    var column = (SqlColumn)table.FindColumn(key);
+                    var column = (SqlColumn) table.FindColumn(key);
                     dataTable.Columns.Add(column.ActualName, column.SqlDbType.ToClrType());
                     bulkCopy.ColumnMappings.Add(column.ActualName, column.ActualName);
                 }

@@ -5,6 +5,5 @@ namespace Simple.Data
     /// </summary>
     public abstract class SimpleQueryClauseBase
     {
-        
     }
 }

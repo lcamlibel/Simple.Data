@@ -1,19 +1,22 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace Simple.Data.Ado
 {
-    using System;
-    using System.Collections;
-    using System.Collections.Generic;
-    using System.Linq;
-
-    internal class SubDictionary<TKey,TValue> : IDictionary<TKey,TValue>
+    internal class SubDictionary<TKey, TValue> : IDictionary<TKey, TValue>
     {
-        private readonly IDictionary<TKey, TValue> _super;
         private readonly Func<TKey, bool> _keyFilter;
+        private readonly IDictionary<TKey, TValue> _super;
 
-        private IEnumerable<KeyValuePair<TKey, TValue>> Filter()
+        public SubDictionary(IDictionary<TKey, TValue> super, Func<TKey, bool> keyFilter)
         {
-            return _super.Where(kvp => _keyFilter(kvp.Key));
+            _super = super;
+            _keyFilter = keyFilter;
         }
+
+        #region IDictionary<TKey,TValue> Members
 
         public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
         {
@@ -91,15 +94,16 @@ namespace Simple.Data.Ado
             get { return Filter().Select(kvp => kvp.Value).ToList().AsReadOnly(); }
         }
 
-        public SubDictionary(IDictionary<TKey, TValue> super, Func<TKey,bool> keyFilter)
-        {
-            _super = super;
-            _keyFilter = keyFilter;
-        }
-
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
+        }
+
+        #endregion
+
+        private IEnumerable<KeyValuePair<TKey, TValue>> Filter()
+        {
+            return _super.Where(kvp => _keyFilter(kvp.Key));
         }
     }
 }

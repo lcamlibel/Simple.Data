@@ -1,20 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Threading;
 
 namespace Simple.Data
 {
-    using System.Threading;
-
     public class Future<T>
     {
-        private T _value;
         private bool _hasValue;
+        private T _value;
 
         private Future()
         {
-            
         }
 
         public T Value

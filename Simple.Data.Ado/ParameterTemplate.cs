@@ -1,17 +1,16 @@
 ﻿using System;
 using System.Data;
+using Simple.Data.Ado.Schema;
 
 namespace Simple.Data.Ado
 {
-    using Schema;
-
     public class ParameterTemplate : IEquatable<ParameterTemplate>
     {
-        private readonly object _fixedValue;
-        private readonly string _name;
-        private readonly DbType _dbType;
-        private readonly int _maxLength;
         private readonly Column _column;
+        private readonly DbType _dbType;
+        private readonly object _fixedValue;
+        private readonly int _maxLength;
+        private readonly string _name;
         private readonly ParameterType _type;
 
         public ParameterTemplate(string name, object fixedValue)
@@ -75,18 +74,22 @@ namespace Simple.Data.Ado
             get { return _fixedValue; }
         }
 
-        public ParameterTemplate Rename(string newName)
-        {
-            return _column == null
-                       ? new ParameterTemplate(newName, _dbType, _maxLength)
-                       : new ParameterTemplate(newName, _column);
-        }
+        #region IEquatable<ParameterTemplate> Members
 
         public bool Equals(ParameterTemplate other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
             return Equals(other._name, _name) && Equals(other._dbType, _dbType);
+        }
+
+        #endregion
+
+        public ParameterTemplate Rename(string newName)
+        {
+            return _column == null
+                       ? new ParameterTemplate(newName, _dbType, _maxLength)
+                       : new ParameterTemplate(newName, _column);
         }
 
         public override bool Equals(object obj)

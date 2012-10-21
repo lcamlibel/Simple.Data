@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Runtime.Serialization;
+using System.Security;
 
 namespace Simple.Data.Ado.Schema
 {
-    using System.Security;
-
     [Serializable]
     [SecurityCritical]
     public class AmbiguousObjectNameException : Exception
@@ -36,7 +35,7 @@ namespace Simple.Data.Ado.Schema
 
         public string Name
         {
-            get { return Data.Contains("Name") ?  Data["Name"].ToString() : null; }
+            get { return Data.Contains("Name") ? Data["Name"].ToString() : null; }
             private set { Data["Name"] = value; }
         }
 

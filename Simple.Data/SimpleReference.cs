@@ -1,7 +1,7 @@
+using System.Dynamic;
+
 namespace Simple.Data
 {
-    using System.Dynamic;
-
     public abstract class SimpleReference : DynamicObject
     {
         private readonly string _alias;

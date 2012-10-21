@@ -5,10 +5,10 @@ using System.Linq;
 
 namespace Simple.Data.Ado
 {
-    public class OptimizedDictionary<TKey,TValue> : IDictionary<TKey,TValue>, ICloneable
+    public class OptimizedDictionary<TKey, TValue> : IDictionary<TKey, TValue>, ICloneable
     {
         private static readonly DictionaryCloner Cloner = new DictionaryCloner();
-        private readonly IDictionary<TKey,int> _index;
+        private readonly IDictionary<TKey, int> _index;
         private readonly List<TValue> _values;
 
         public OptimizedDictionary(IDictionary<TKey, int> index, IEnumerable<TValue> values)
@@ -17,6 +17,25 @@ namespace Simple.Data.Ado
             _values = new List<TValue>(_index.Count);
             _values.AddRange(values);
         }
+
+        #region ICloneable Members
+
+        /// <summary>
+        /// Creates a new object that is a copy of the current instance.
+        /// </summary>
+        /// <returns>
+        /// A new object that is a copy of this instance.
+        /// </returns>
+        public object Clone()
+        {
+            return new OptimizedDictionary<TKey, TValue>(_index,
+                                                         _values.OfType<object>().Select(Cloner.CloneValue).Cast<TValue>
+                                                             ());
+        }
+
+        #endregion
+
+        #region IDictionary<TKey,TValue> Members
 
         /// <summary>
         /// Returns an enumerator that iterates through the collection.
@@ -42,11 +61,6 @@ namespace Simple.Data.Ado
             return GetEnumerator();
         }
 
-        private IEnumerable<KeyValuePair<TKey,TValue>> Enumerable()
-        {
-            return Keys.Select(key => new KeyValuePair<TKey, TValue>(key, this[key]));
-        }
-
         /// <summary>
         /// Adds an item to the <see cref="T:System.Collections.Generic.ICollection`1"/>.
         /// </summary>
@@ -58,21 +72,6 @@ namespace Simple.Data.Ado
                 AddKeyToIndex(item.Key);
             }
             _values[_index[item.Key]] = item.Value;
-        }
-
-        private void AddKeyToIndex(TKey key)
-        {
-            lock (_index.GetLockObject())
-            {
-                if (!_index.ContainsKey(key))
-                {
-                    _index.Add(key, _index.Count);
-                    while (_values.Count < _index.Count)
-                    {
-                        _values.Add(default(TValue));
-                    }
-                }
-            }
         }
 
         /// <summary>
@@ -102,7 +101,7 @@ namespace Simple.Data.Ado
         /// <param name="array">The one-dimensional <see cref="T:System.Array"/> that is the destination of the elements copied from <see cref="T:System.Collections.Generic.ICollection`1"/>. The <see cref="T:System.Array"/> must have zero-based indexing.</param><param name="arrayIndex">The zero-based index in <paramref name="array"/> at which copying begins.</param><exception cref="T:System.ArgumentNullException"><paramref name="array"/> is null.</exception><exception cref="T:System.ArgumentOutOfRangeException"><paramref name="arrayIndex"/> is less than 0.</exception><exception cref="T:System.ArgumentException"><paramref name="array"/> is multidimensional.-or-The number of elements in the source <see cref="T:System.Collections.Generic.ICollection`1"/> is greater than the available space from <paramref name="arrayIndex"/> to the end of the destination <paramref name="array"/>.</exception>
         public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
         {
-            foreach (var key in _index.Keys)
+            foreach (TKey key in _index.Keys)
             {
                 int index = arrayIndex + _index[key];
                 array[index] = new KeyValuePair<TKey, TValue>(key, _values[index]);
@@ -267,15 +266,26 @@ namespace Simple.Data.Ado
             get { return _values.ToArray(); }
         }
 
-        /// <summary>
-        /// Creates a new object that is a copy of the current instance.
-        /// </summary>
-        /// <returns>
-        /// A new object that is a copy of this instance.
-        /// </returns>
-        public object Clone()
+        #endregion
+
+        private IEnumerable<KeyValuePair<TKey, TValue>> Enumerable()
         {
-            return new OptimizedDictionary<TKey,TValue>(_index, _values.OfType<object>().Select(Cloner.CloneValue).Cast<TValue>());
+            return Keys.Select(key => new KeyValuePair<TKey, TValue>(key, this[key]));
+        }
+
+        private void AddKeyToIndex(TKey key)
+        {
+            lock (_index.GetLockObject())
+            {
+                if (!_index.ContainsKey(key))
+                {
+                    _index.Add(key, _index.Count);
+                    while (_values.Count < _index.Count)
+                    {
+                        _values.Add(default(TValue));
+                    }
+                }
+            }
         }
     }
 }

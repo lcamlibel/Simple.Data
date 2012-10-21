@@ -1,21 +1,21 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Data;
+
 namespace Simple.Data.Ado
 {
-    using System;
-    using System.Collections;
-    using System.Collections.Generic;
-    using System.Data;
-    using System.Data.Common;
-
-    class DataReaderMultipleEnumerator : IEnumerator<IEnumerable<IDictionary<string, object>>>
+    internal class DataReaderMultipleEnumerator : IEnumerator<IEnumerable<IDictionary<string, object>>>
     {
-        private readonly IDisposable _connectionDisposable;
-        private readonly IDbConnection _connection;
-        private IDictionary<string, int> _index;
         private readonly IDbCommand _command;
-        private IDataReader _reader;
+        private readonly IDbConnection _connection;
+        private readonly IDisposable _connectionDisposable;
+        private IDictionary<string, int> _index;
         private bool _lastRead;
+        private IDataReader _reader;
 
-        public DataReaderMultipleEnumerator(IDbCommand command, IDbConnection connection) : this(command, connection, null)
+        public DataReaderMultipleEnumerator(IDbCommand command, IDbConnection connection)
+            : this(command, connection, null)
         {
         }
 
@@ -26,6 +26,8 @@ namespace Simple.Data.Ado
             _connectionDisposable = _connection.MaybeDisposable();
             _index = index;
         }
+
+        #region IEnumerator<IEnumerable<IDictionary<string,object>>> Members
 
         public void Dispose()
         {
@@ -49,13 +51,6 @@ namespace Simple.Data.Ado
             return _lastRead;
         }
 
-        private void ExecuteReader()
-        {
-            _connection.OpenIfClosed();
-            _reader = _command.TryExecuteReader();
-            _index = _index ?? _reader.CreateDictionaryIndex();
-        }
-
         public void Reset()
         {
             if (_reader != null) _reader.Dispose();
@@ -67,7 +62,7 @@ namespace Simple.Data.Ado
             get
             {
                 if (!_lastRead) throw new InvalidOperationException();
-                var index = _reader.CreateDictionaryIndex();
+                Dictionary<string, int> index = _reader.CreateDictionaryIndex();
                 while (_reader.Read())
                 {
                     yield return _reader.ToDictionary(index);
@@ -78,6 +73,15 @@ namespace Simple.Data.Ado
         object IEnumerator.Current
         {
             get { return Current; }
+        }
+
+        #endregion
+
+        private void ExecuteReader()
+        {
+            _connection.OpenIfClosed();
+            _reader = _command.TryExecuteReader();
+            _index = _index ?? _reader.CreateDictionaryIndex();
         }
     }
 }

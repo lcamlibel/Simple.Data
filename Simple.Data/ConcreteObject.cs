@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Dynamic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 
 namespace Simple.Data
@@ -12,7 +9,7 @@ namespace Simple.Data
         private static readonly object CastFailureObject = new object();
         private WeakReference _concreteObject;
 
-        public object Get(Type type, IDictionary<string,object> data)
+        public object Get(Type type, IDictionary<string, object> data)
         {
             if (_concreteObject == null || !_concreteObject.IsAlive)
             {

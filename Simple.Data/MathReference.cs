@@ -1,15 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Simple.Data
 {
     public class MathReference : SimpleReference, IEquatable<MathReference>
     {
         private readonly object _leftOperand;
-        private readonly object _rightOperand;
         private readonly MathOperator _operator;
+        private readonly object _rightOperand;
 
         public MathReference(object leftOperand, object rightOperand, MathOperator @operator)
         {
@@ -18,7 +15,8 @@ namespace Simple.Data
             _operator = @operator;
         }
 
-        private MathReference(object leftOperand, object rightOperand, MathOperator @operator, string alias) : base(alias)
+        private MathReference(object leftOperand, object rightOperand, MathOperator @operator, string alias)
+            : base(alias)
         {
             _leftOperand = leftOperand;
             _rightOperand = rightOperand;
@@ -39,6 +37,18 @@ namespace Simple.Data
         {
             get { return _leftOperand; }
         }
+
+        #region IEquatable<MathReference> Members
+
+        public bool Equals(MathReference other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(other._leftOperand, _leftOperand) && Equals(other._rightOperand, _rightOperand) &&
+                   Equals(other._operator, _operator);
+        }
+
+        #endregion
 
         public MathReference As(string alias)
         {
@@ -109,13 +119,6 @@ namespace Simple.Data
         public static SimpleExpression operator >=(MathReference column, object value)
         {
             return new SimpleExpression(column, value, SimpleExpressionType.GreaterThanOrEqual);
-        }
-
-        public bool Equals(MathReference other)
-        {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return Equals(other._leftOperand, _leftOperand) && Equals(other._rightOperand, _rightOperand) && Equals(other._operator, _operator);
         }
 
         public override bool Equals(object obj)

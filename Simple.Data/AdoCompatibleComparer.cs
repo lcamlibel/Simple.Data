@@ -1,11 +1,13 @@
+using System.Collections.Generic;
+using Simple.Data.Extensions;
+
 namespace Simple.Data
 {
-    using System.Collections.Generic;
-    using Extensions;
-
     public class AdoCompatibleComparer : IEqualityComparer<string>
     {
         public static readonly HomogenizedEqualityComparer DefaultInstance = new HomogenizedEqualityComparer();
+
+        #region IEqualityComparer<string> Members
 
         public bool Equals(string x, string y)
         {
@@ -18,5 +20,7 @@ namespace Simple.Data
         {
             return obj.Homogenize().Singularize().GetHashCode();
         }
+
+        #endregion
     }
 }

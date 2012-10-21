@@ -2,14 +2,11 @@
 
 namespace Simple.Data.Ado
 {
-    using System.Linq;
-    using Extensions;
-
     public class OptimizedDictionaryIndex<T>
     {
         private readonly Dictionary<T, int> _index;
 
-        internal OptimizedDictionaryIndex(IDictionary<T,int> index)
+        internal OptimizedDictionaryIndex(IDictionary<T, int> index)
         {
             _index = new Dictionary<T, int>(index);
         }
@@ -18,7 +15,7 @@ namespace Simple.Data.Ado
         {
             _index = new Dictionary<T, int>();
             int i = 0;
-            foreach (var key in index)
+            foreach (T key in index)
             {
                 _index[key] = i++;
             }

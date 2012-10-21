@@ -29,7 +29,7 @@ namespace Simple.Data.IntegrationTest
         {
             var mockDatabase = new MockDatabase();
             dynamic database = CreateDatabase(mockDatabase);
-            database.Users.FindAllById(1.to(10)).ToList();
+            database.Users.FindAllById(1.To(10)).ToList();
             Assert.AreEqual("select [dbo].[users].[id],[dbo].[users].[name],[dbo].[users].[password],[dbo].[users].[age],[dbo].[users].[joindate] from [dbo].[users] where [dbo].[users].[id] between @p1_start and @p1_end".ToLowerInvariant(), mockDatabase.Sql.ToLowerInvariant());
             Assert.AreEqual(1, mockDatabase.Parameters[0]);
             Assert.AreEqual(10, mockDatabase.Parameters[1]);
@@ -64,7 +64,7 @@ namespace Simple.Data.IntegrationTest
         {
             var mockDatabase = new MockDatabase();
             dynamic database = CreateDatabase(mockDatabase);
-            database.Users.FindAllByJoinDate("2011-01-01".to("2011-01-31")).ToList();
+            database.Users.FindAllByJoinDate("2011-01-01".To("2011-01-31")).ToList();
             Assert.AreEqual("select [dbo].[users].[id],[dbo].[users].[name],[dbo].[users].[password],[dbo].[users].[age],[dbo].[users].[joindate] from [dbo].[users] where [dbo].[users].[joindate] between @p1_start and @p1_end".ToLowerInvariant(), mockDatabase.Sql.ToLowerInvariant());
             Assert.AreEqual(new DateTime(2011,1,1), mockDatabase.Parameters[0]);
             Assert.AreEqual(new DateTime(2011,1,31), mockDatabase.Parameters[1]);

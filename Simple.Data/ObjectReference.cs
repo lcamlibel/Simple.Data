@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using Simple.Data.Commands;
 
 namespace Simple.Data
@@ -14,9 +11,9 @@ namespace Simple.Data
     /// </summary>
     public class ObjectReference : SimpleReference, IEquatable<ObjectReference>
     {
+        private readonly DataStrategy _dataStrategy;
         private readonly string _name;
         private readonly ObjectReference _owner;
-        private readonly DataStrategy _dataStrategy;
 
         internal ObjectReference(string name) : this(name, null, null, null)
         {
@@ -30,16 +27,41 @@ namespace Simple.Data
         {
         }
 
-        internal ObjectReference(string name, ObjectReference owner, DataStrategy dataStrategy) : this(name, owner, dataStrategy, null)
+        internal ObjectReference(string name, ObjectReference owner, DataStrategy dataStrategy)
+            : this(name, owner, dataStrategy, null)
         {
         }
 
-        internal ObjectReference(string name, ObjectReference owner, DataStrategy dataStrategy, string alias) : base(alias)
+        internal ObjectReference(string name, ObjectReference owner, DataStrategy dataStrategy, string alias)
+            : base(alias)
         {
             _name = name;
             _owner = owner;
             _dataStrategy = dataStrategy;
         }
+
+        public dynamic this[string name]
+        {
+            get { return new ObjectReference(name, this); }
+        }
+
+        #region IEquatable<ObjectReference> Members
+
+        /// <summary>
+        /// Indicates whether the current object is equal to another object of the same type.
+        /// </summary>
+        /// <returns>
+        /// true if the current object is equal to the <paramref name="other"/> parameter; otherwise, false.
+        /// </returns>
+        /// <param name="other">An object to compare with this object.</param>
+        public bool Equals(ObjectReference other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(other._name, _name) && Equals(other._owner, _owner);
+        }
+
+        #endregion
 
         /// <summary>
         /// Gets the owner of the referenced object; <c>null</c> if the object is top-level.
@@ -95,14 +117,17 @@ namespace Simple.Data
             {
                 if (TryInvokeDataStrategyMethod(args, out result)) return true;
 
-                if (_dataStrategy.TryInvokeFunction(_name, () => binder.ArgumentsToDictionary(args), out result)) return true;
+                if (_dataStrategy.TryInvokeFunction(_name, () => binder.ArgumentsToDictionary(args), out result))
+                    return true;
             }
             throw new InvalidOperationException();
         }
 
         private bool TryInvokeDataStrategyMethod(object[] args, out object result)
         {
-            var methodInfo = _dataStrategy.GetType().GetMethod(_name, args.Select(a => (a ?? new object()).GetType()).ToArray());
+            MethodInfo methodInfo = _dataStrategy.GetType().GetMethod(_name,
+                                                                      args.Select(a => (a ?? new object()).GetType()).
+                                                                          ToArray());
             if (methodInfo != null)
             {
                 result = methodInfo.Invoke(_dataStrategy, args);
@@ -129,19 +154,19 @@ namespace Simple.Data
                 var schema = new DynamicSchema(_name, _dataStrategy);
                 if (schema.TryInvokeMember(binder, args, out result))
                 {
-                    _dataStrategy.SetMemberAsSchema(this); 
+                    _dataStrategy.SetMemberAsSchema(this);
                     return true;
                 }
             }
 
-            var dataStrategy = FindDataStrategyInHierarchy();
+            DataStrategy dataStrategy = FindDataStrategyInHierarchy();
             if (dataStrategy != null)
             {
-                var command = CommandFactory.GetCommandFor(binder.Name);
+                ICommand command = CommandFactory.GetCommandFor(binder.Name);
                 if (command != null)
                 {
-                    var schema = dataStrategy.SetMemberAsSchema(_owner);
-                    var table = schema.GetTable(_name);
+                    DynamicSchema schema = dataStrategy.SetMemberAsSchema(_owner);
+                    DynamicTable table = schema.GetTable(_name);
                     table.TryInvokeMember(binder, args, out result);
                     //result = command.Execute(dataStrategy, table, binder, args);
                 }
@@ -149,7 +174,8 @@ namespace Simple.Data
                 {
                     if (dataStrategy.IsExpressionFunction(binder.Name, args))
                     {
-                        result = new SimpleExpression(this, new SimpleFunction(binder.Name, args), SimpleExpressionType.Function);
+                        result = new SimpleExpression(this, new SimpleFunction(binder.Name, args),
+                                                      SimpleExpressionType.Function);
                     }
                     else
                     {
@@ -175,11 +201,6 @@ namespace Simple.Data
             return true;
         }
 
-        public dynamic this[string name]
-        {
-            get { return new ObjectReference(name, this); }
-        }
-
         /// <summary>
         /// Gets the names of all objects included in the reference as an array, with the uppermost object first.
         /// </summary>
@@ -194,7 +215,7 @@ namespace Simple.Data
         /// Gets the names of all objects included in the reference as an array, with the uppermost object first.
         /// </summary>
         /// <returns></returns>
-        public Tuple<string,string>[] GetAllObjectNamesAndAliases()
+        public Tuple<string, string>[] GetAllObjectNamesAndAliases()
         {
             if (ReferenceEquals(GetOwner(), null)) return new[] {Tuple.Create(_name, GetAlias())};
             return _owner.GetAllObjectNamesAndAliases().Concat(new[] {Tuple.Create(_name, GetAlias())}).ToArray();
@@ -213,21 +234,7 @@ namespace Simple.Data
         public static ObjectReference FromStrings(params string[] source)
         {
             return source.Where(current => !String.IsNullOrEmpty(current))
-                         .Aggregate<string, ObjectReference>(null, (current, element) => new ObjectReference(element, current));
-        }
-
-        /// <summary>
-        /// Indicates whether the current object is equal to another object of the same type.
-        /// </summary>
-        /// <returns>
-        /// true if the current object is equal to the <paramref name="other"/> parameter; otherwise, false.
-        /// </returns>
-        /// <param name="other">An object to compare with this object.</param>
-        public bool Equals(ObjectReference other)
-        {
-            if (ReferenceEquals(null, other)) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return Equals(other._name, _name) && Equals(other._owner, _owner);
+                .Aggregate<string, ObjectReference>(null, (current, element) => new ObjectReference(element, current));
         }
 
         /// <summary>
@@ -256,7 +263,8 @@ namespace Simple.Data
         {
             unchecked
             {
-                return ((_name != null ? _name.GetHashCode() : 0)*397) ^ (!ReferenceEquals(_owner, null) ? _owner.GetHashCode() : 0);
+                return ((_name != null ? _name.GetHashCode() : 0)*397) ^
+                       (!ReferenceEquals(_owner, null) ? _owner.GetHashCode() : 0);
             }
         }
 
