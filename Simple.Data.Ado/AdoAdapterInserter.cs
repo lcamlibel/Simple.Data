@@ -38,8 +38,9 @@ namespace Simple.Data.Ado
             if (data == null) throw new ArgumentNullException("data");
             List<IDictionary<string, object>> list = data.ToList();
             Table table = _adapter.GetSchema().FindTable(tableName);
-            foreach (var row in list)
+            for (int index = 0; index < list.Count; index++)
             {
+                var row = list[index];
                 CheckInsertablePropertiesAreAvailable(table, row);
             }
 

@@ -58,10 +58,13 @@ namespace Simple.Data.SqlServer
                     SqlCommandBuilder.DeriveParameters(command);
 
                     //Tim Cartwright: I added size and dbtype so inout/out params would function properly.
-                    foreach (SqlParameter p in command.Parameters)
+                    for (int index = 0; index < command.Parameters.Count; index++)
+                    {
+                        SqlParameter p = command.Parameters[index];
                         yield return
                             new Parameter(p.ParameterName, SqlTypeResolver.GetClrType(p.DbType.ToString()), p.Direction,
                                           p.DbType, p.Size);
+                    }
                 }
             }
         }

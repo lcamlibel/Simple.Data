@@ -7,9 +7,10 @@ namespace Simple.Data.Extensions
         public static string ToSnakeCase(this string source)
         {
             var builder = new StringBuilder();
-
-            foreach (char c in source)
+            var length = source.Length;
+            for (int index = 0; index < length; index++)
             {
+                char c = source[index];
                 if (char.IsUpper(c))
                 {
                     if (builder.Length > 0) builder.Append('_');

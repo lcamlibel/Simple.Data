@@ -78,8 +78,9 @@ namespace Simple.Data.Ado
             string[] columnNameList = sql.Substring(openParenIndex, closeParenLength).Trim('(', ')').Split(',');
             int index = 0;
             var sqlBuilder = new StringBuilder();
-            foreach (char c in sql)
+            for (int i = 0; i < sql.Length; i++)
             {
+                char c = sql[i];
                 if (c == '?')
                 {
                     Column column = columnLookup[columnNameList[index]];

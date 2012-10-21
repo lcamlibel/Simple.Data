@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
@@ -32,7 +33,8 @@ namespace PerformanceTestConsole
     class Program
     {
 
-        public static readonly string ConnectionString = "Data Source=.;Initial Catalog=tempdb;Integrated Security=true";
+        public static readonly string ConnectionString =
+            ConfigurationManager.ConnectionStrings["TestPerf"].ConnectionString;
 
         public static SqlConnection GetOpenConnection()
         {
@@ -45,7 +47,7 @@ namespace PerformanceTestConsole
         {
             var test = new PerformanceTests();
             Console.WriteLine("Running 500 iterations that load up a post entity");
-            test.Run(500);
+            test.Run(1500);
         }
 
         static void Main(string[] args)
@@ -169,7 +171,7 @@ end
         public void Run(int iterations)
         {
             var tests = new Tests();
-            var simpleDb = Simple.Data.Database.OpenConnection(Program.ConnectionString);
+            var simpleDb = Simple.Data.Database.OpenNamedConnection("TestPerf");
             SqlConnection connection = Program.GetOpenConnection();
             simpleDb.UseSharedConnection(connection);
             simpleDb.Posts.FindById(1);

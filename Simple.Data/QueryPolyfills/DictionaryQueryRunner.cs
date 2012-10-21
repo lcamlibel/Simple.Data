@@ -45,9 +45,12 @@
                 source = list;
             }
 
-            foreach (var clause in _clauses)
+            for (int index = 0; index < _clauses.Count; index++)
             {
-                Func<SimpleQueryClauseBase, IEnumerable<IDictionary<string, object>>, IEnumerable<IDictionary<string, object>>> handler;
+                var clause = _clauses[index];
+                Func
+                    <SimpleQueryClauseBase, IEnumerable<IDictionary<string, object>>,
+                        IEnumerable<IDictionary<string, object>>> handler;
                 if (ClauseHandlers.TryGetValue(clause.GetType(), out handler))
                 {
                     source = handler(clause, source);
@@ -80,12 +83,17 @@
 
             selectReferences = selectClause != null ? selectClause.Columns.ToList() : new List<SimpleReference> { new AllColumnsSpecialReference() };
 
-            foreach (var clause in havingClauses)
+            for (int index = 0; index < havingClauses.Count; index++)
             {
+                var clause = havingClauses[index];
                 var criteria = HavingToWhere(clause.Criteria, selectReferences);
                 source = new SelectClauseHandler(new SelectClause(selectReferences)).Run(source).ToList();
                 source = new WhereClauseHandler(new WhereClause(criteria)).Run(source);
-                source = source.Select(d => d.Where(kvp => !kvp.Key.StartsWith(AutoColumnPrefix)).ToDictionary(kvp => kvp.Key, kvp => kvp.Value));
+                source =
+                    source.Select(
+                        d =>
+                        d.Where(kvp => !kvp.Key.StartsWith(AutoColumnPrefix)).ToDictionary(kvp => kvp.Key,
+                                                                                           kvp => kvp.Value));
             }
 
             return source;

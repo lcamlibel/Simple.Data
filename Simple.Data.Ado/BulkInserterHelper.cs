@@ -163,8 +163,9 @@ namespace Simple.Data.Ado
 
         private static void TryPrepare(params IDbCommand[] commands)
         {
-            foreach (IDbCommand command in commands)
+            for (int index = 0; index < commands.Length; index++)
             {
+                IDbCommand command = commands[index];
                 try
                 {
                     command.Prepare();
@@ -188,8 +189,9 @@ namespace Simple.Data.Ado
                     k => _columns.Any(c => String.Equals(c.ActualName, k, StringComparison.InvariantCultureIgnoreCase)))
                     .ToArray();
 
-            foreach (string columnName in usedColumnNames)
+            for (int i = 0; i < usedColumnNames.Length; i++)
             {
+                string columnName = usedColumnNames[i];
                 int index = _columns.IndexOf(_table.FindColumn(columnName));
                 if (index >= 0)
                     actions[index] = BuildIndividualFunction(columnName, index);

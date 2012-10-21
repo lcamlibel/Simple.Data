@@ -49,8 +49,9 @@ namespace Simple.Data.Ado
             if ((!parameterValues.Any(pv => pv != null)) && fixedParameters.Length == 0) yield break;
             parameterValues = parameterValues.Where(pv => pv != null);
 
-            foreach (ParameterTemplate fixedParameter in fixedParameters)
+            for (int index = 0; index < fixedParameters.Length; index++)
             {
+                ParameterTemplate fixedParameter = fixedParameters[index];
                 yield return CreateParameter(command, fixedParameter, fixedParameter.FixedValue);
             }
 

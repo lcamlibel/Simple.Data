@@ -252,8 +252,9 @@ namespace Simple.Data.Ado
             }
             else
             {
-                foreach (SimpleQuery t in queries)
+                for (int index = 0; index < queries.Length; index++)
                 {
+                    SimpleQuery t = queries[index];
                     IEnumerable<SimpleQueryClauseBase> unhandledClausesForThisQuery;
                     yield return RunQuery(t, out unhandledClausesForThisQuery);
                     unhandledClauses.Add(unhandledClausesForThisQuery);

@@ -36,8 +36,9 @@ namespace Simple.Data.Ado
         {
             List<Tuple<ObjectName, ObjectName>> tablePairs =
                 tableList.Select(t => new ObjectName(mainTableName.Schema, t)).ToTuplePairs().ToList();
-            foreach (var tablePair in tablePairs)
+            for (int index = 0; index < tablePairs.Count; index++)
             {
+                var tablePair = tablePairs[index];
                 AddJoin(tablePair.Item1, tablePair.Item2);
             }
             return tablePairs.Select(tp => _done[tp.Item2]);
@@ -50,8 +51,9 @@ namespace Simple.Data.Ado
             _done.AddOrUpdate(mainTableName, string.Empty, (s, o) => string.Empty);
             List<Tuple<ObjectName, ObjectName>> tablePairs =
                 GetTableNames(expression, mainTableName.Schema).Distinct().ToList();
-            foreach (var tablePair in tablePairs)
+            for (int index = 0; index < tablePairs.Count; index++)
             {
+                var tablePair = tablePairs[index];
                 AddJoin(tablePair.Item1, tablePair.Item2);
             }
             return tablePairs.Select(tp => _done[tp.Item2]).Distinct();
@@ -63,8 +65,9 @@ namespace Simple.Data.Ado
             _done.AddOrUpdate(mainTableName, string.Empty, (s, o) => string.Empty);
             List<Tuple<ObjectName, ObjectName>> tablePairs =
                 GetTableNames(references, mainTableName.Schema).Distinct().ToList();
-            foreach (var tablePair in tablePairs)
+            for (int index = 0; index < tablePairs.Count; index++)
             {
+                var tablePair = tablePairs[index];
                 AddJoin(tablePair.Item1, tablePair.Item2, joinType);
             }
             return tablePairs.Select(tp => _done[tp.Item2]).Distinct();

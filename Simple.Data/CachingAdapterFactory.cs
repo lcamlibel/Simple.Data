@@ -31,7 +31,7 @@ namespace Simple.Data
                 mat = settings.ToList();
                 hash = HashSettings(adapterName, mat);
             }
-
+            //http://www.codethinked.com/blockingcollection-and-iproducerconsumercollection
             Adapter adapter = _cache.GetOrAdd(hash, _ => DoCreate(adapterName, mat));
             var cloneable = adapter as ICloneable;
             if (cloneable != null) return (Adapter) cloneable.Clone();

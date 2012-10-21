@@ -88,8 +88,9 @@ namespace Simple.Data.Ado
             var relationTypeDict = new Dictionary<ObjectReference, RelationType>();
             if (withClauses.Count > 0)
             {
-                foreach (WithClause withClause in withClauses)
+                for (int index = 0; index < withClauses.Count; index++)
                 {
+                    WithClause withClause = withClauses[index];
                     if (withClause.ObjectReference.GetOwner().IsNull())
                     {
                         HandleWithClauseUsingAssociatedJoinClause(relationTypeDict, withClause);
@@ -217,8 +218,9 @@ namespace Simple.Data.Ado
             List<string> leftJoinList =
                 joinList.Where(s => s.StartsWith("LEFT ", StringComparison.OrdinalIgnoreCase)).ToList();
 
-            foreach (string leftJoin in leftJoinList)
+            for (int index = 0; index < leftJoinList.Count; index++)
             {
+                string leftJoin = leftJoinList[index];
                 if (joinList.Any(s => s.Equals(leftJoin.Substring(5), StringComparison.OrdinalIgnoreCase)))
                 {
                     joinList.Remove(leftJoin);

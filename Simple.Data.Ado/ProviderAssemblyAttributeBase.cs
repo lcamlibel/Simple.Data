@@ -34,8 +34,9 @@ namespace Simple.Data.Ado
         {
             if (assembly.ReflectionOnly)
             {
-                foreach (AssemblyName referencedAssembly in assembly.GetReferencedAssemblies())
+                for (int index = 0; index < assembly.GetReferencedAssemblies().Length; index++)
                 {
+                    AssemblyName referencedAssembly = assembly.GetReferencedAssemblies()[index];
                     if (
                         AppDomain.CurrentDomain.ReflectionOnlyGetAssemblies().All(
                             a => a.GetFullName() != referencedAssembly.FullName))

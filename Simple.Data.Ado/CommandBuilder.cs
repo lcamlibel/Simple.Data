@@ -191,8 +191,9 @@ namespace Simple.Data.Ado
             if (parameterList.Any(kvp => kvp.Value is IRange) ||
                 parameterList.Any(kvp => kvp.Value is IEnumerable && !(kvp.Value is string)))
             {
-                foreach (var pair in parameterList)
+                for (int index = 0; index < parameterList.Count; index++)
                 {
+                    var pair = parameterList[index];
                     foreach (
                         IDbDataParameter parameter in
                             CreateParameterComplex(parameterFactory, pair.Key, pair.Value, command))
@@ -203,8 +204,9 @@ namespace Simple.Data.Ado
             }
             else
             {
-                foreach (var pair in parameterList)
+                for (int index = 0; index < parameterList.Count; index++)
                 {
+                    var pair = parameterList[index];
                     command.Parameters.Add(CreateSingleParameter(parameterFactory, pair.Value, pair.Key));
                 }
             }

@@ -239,6 +239,9 @@ Global
 		{1B6A87C0-4ACA-4411-8879-844537A52126} = {182AEEFE-9B89-4264-BCED-91A00D1EF896}
 		{9AAF3008-8033-4A26-93D2-97928E7801E9} = {2AAC5DFA-3851-4324-A51F-5BC46BEB777C}
 	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
 	GlobalSection(NDepend) = preSolution
 		Project = ".\Simple_Data.ndproj"
 	EndGlobalSection

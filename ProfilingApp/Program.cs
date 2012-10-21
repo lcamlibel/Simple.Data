@@ -15,6 +15,7 @@ namespace ProfilingApp
             //ResetDatabase();
 
             new CastTask().Run();
+           // Console.ReadLine();
         }
 
         private static void ResetDatabase()

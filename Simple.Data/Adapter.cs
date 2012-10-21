@@ -279,8 +279,9 @@ namespace Simple.Data
                                                                                             <SimpleQueryClauseBase>>
                                                                                             unhandledClauses)
         {
-            foreach (SimpleQuery query in queries)
+            for (int index = 0; index < queries.Length; index++)
             {
+                SimpleQuery query = queries[index];
                 IEnumerable<SimpleQueryClauseBase> unhandledClausesForThisQuery;
                 IEnumerable<IDictionary<string, object>> result = RunQuery(query, out unhandledClausesForThisQuery);
                 unhandledClauses.Add(unhandledClausesForThisQuery);
@@ -639,8 +640,9 @@ namespace Simple.Data
             if (transactionAdapter == null)
                 throw new NotSupportedException("Transactions are not supported with current adapter.");
 
-            foreach (var row in list)
+            for (int index = 0; index < list.Count; index++)
             {
+                var row = list[index];
                 IDictionary<string, object> result;
                 try
                 {

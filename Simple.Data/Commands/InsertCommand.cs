@@ -67,8 +67,9 @@ namespace Simple.Data.Commands
             {
                 object[] array = entityList.Cast<object>().ToArray();
                 var rows = new List<IDictionary<string, object>>();
-                foreach (object o in array)
+                for (int index = 0; index < array.Length; index++)
                 {
+                    object o = array[index];
                     dictionary = (o as IDictionary<string, object>) ?? o.ObjectToDictionary();
                     if (dictionary.Count == 0)
                     {

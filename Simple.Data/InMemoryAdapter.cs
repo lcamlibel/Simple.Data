@@ -265,8 +265,9 @@ namespace Simple.Data
         public override int Delete(string tableName, SimpleExpression criteria)
         {
             List<IDictionary<string, object>> deletions = Find(tableName, criteria).ToList();
-            foreach (var record in deletions)
+            for (int index = 0; index < deletions.Count; index++)
             {
+                var record = deletions[index];
                 GetTable(tableName).Remove(record);
             }
             return deletions.Count;

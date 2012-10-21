@@ -87,8 +87,9 @@ namespace Simple.Data.Ado
                                                                    Func<IDictionary<string, object>, Exception, bool>
                                                                        errorCallback)
         {
-            foreach (var row in list)
+            for (int index = 0; index < list.Count; index++)
             {
+                var row = list[index];
                 IDictionary<string, object> result;
                 try
                 {
@@ -113,8 +114,9 @@ namespace Simple.Data.Ado
                                                                    Func<IDictionary<string, object>, Exception, bool>
                                                                        errorCallback)
         {
-            foreach (var row in list)
+            for (int index = 0; index < list.Count; index++)
             {
+                var row = list[index];
                 IDictionary<string, object> result;
                 try
                 {

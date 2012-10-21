@@ -56,8 +56,9 @@ namespace Simple.Data.Ado
                 Dictionary<string, IDbDataParameter> propertyToParameterMap = CreatePropertyToParameterMap(data, table,
                                                                                                            command);
 
-                foreach (var row in data)
+                for (int index = 0; index < data.Count; index++)
                 {
+                    var row = data[index];
                     foreach (var kvp in row)
                     {
                         if (propertyToParameterMap.ContainsKey(kvp.Key))

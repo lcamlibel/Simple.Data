@@ -19,8 +19,9 @@ namespace Simple.Data
         {
             List<MethodInfo> adapterMethods = _adapter.GetType().GetMethods().Where(m => m.Name == binder.Name).ToList();
 
-            foreach (MethodInfo method in adapterMethods)
+            for (int index = 0; index < adapterMethods.Count; index++)
             {
+                MethodInfo method = adapterMethods[index];
                 ParameterInfo[] parameters = method.GetParameters().ToArray();
                 if (parameters.Any(p => p.RawDefaultValue != DBNull.Value) &&
                     binder.CallInfo.ArgumentNames.Any(s => !string.IsNullOrWhiteSpace(s)))

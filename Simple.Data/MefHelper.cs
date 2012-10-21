@@ -78,8 +78,10 @@ namespace Simple.Data
 
             var assemblyCatalog = new AssemblyCatalog(ThisAssembly);
             var aggregateCatalog = new AggregateCatalog(assemblyCatalog);
-            foreach (string file in Directory.GetFiles(path, "Simple.Data.*.dll"))
+            var length=Directory.GetFiles(path, "Simple.Data.*.dll").Length;
+            for (int index = 0; index < length; index++)
             {
+                string file = Directory.GetFiles(path, "Simple.Data.*.dll")[index];
                 var catalog = new AssemblyCatalog(file);
                 aggregateCatalog.Catalogs.Add(catalog);
             }
